@@ -54,8 +54,21 @@ func main() {
 			Tail:       "all",
 			Details:    true,
 		})
+		if err != nil {
+			panic(err)
+		}
 
-		n, err := stdcopy.StdCopy(os.Stdout, os.Stderr, logs)
+		f, err := os.OpenFile(fmt.Sprintf("./logs/%s.log", id), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			panic(err)
+		}
+		defer func() {
+			if err := f.Close(); err != nil {
+				fmt.Printf("error closing log file: %s", err)
+			}
+		}()
+
+		n, err := stdcopy.StdCopy(f, f, logs)
 		if err != nil {
 			panic(err)
 		}
