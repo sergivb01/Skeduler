@@ -39,49 +39,48 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("id=%s\n", resp.ID)
+	containerID := resp.ID
+	fmt.Printf("id=%s\n", containerID)
 
-	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+	if err := cli.ContainerStart(ctx, containerID, types.ContainerStartOptions{}); err != nil {
 		panic(err)
 	}
 
+	logs, err := cli.ContainerLogs(ctx, containerID, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Timestamps: true,
+		Follow:     true,
+		Tail:       "all",
+		Details:    true,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	f, err := os.OpenFile(fmt.Sprintf("./logs/%s.log", containerID), os.O_APPEND|os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
 	go func(id string) {
-		logs, err := cli.ContainerLogs(ctx, id, types.ContainerLogsOptions{
-			ShowStdout: true,
-			ShowStderr: true,
-			Timestamps: true,
-			Follow:     true,
-			Tail:       "all",
-			Details:    true,
-		})
-		if err != nil {
-			panic(err)
-		}
-
-		f, err := os.OpenFile(fmt.Sprintf("./logs/%s.log", id), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			panic(err)
-		}
-		defer func() {
-			if err := f.Close(); err != nil {
-				fmt.Printf("error closing log file: %s", err)
-			}
-		}()
-
 		n, err := stdcopy.StdCopy(f, f, logs)
 		if err != nil {
 			panic(err)
 		}
 		fmt.Printf("read %d log bytes\n", n)
-	}(resp.ID)
+	}(containerID)
 
-	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+	statusCh, errCh := cli.ContainerWait(ctx, containerID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errCh:
 		if err != nil {
 			panic(err)
 		}
-	case <-statusCh:
+	case s := <-statusCh:
+		fmt.Printf("container %s stopped with status code = %d and error = %q\n", containerID, s.StatusCode, s.Error)
+		break
 	}
 
 	fmt.Printf("shutdown!\n")
