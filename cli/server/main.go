@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/docker/docker/api/types"
@@ -17,18 +18,18 @@ func main() {
 		panic(err)
 	}
 
-	resources := container.Resources{
-		DeviceRequests: []container.DeviceRequest{
-			{
-				Driver: "nvidia",
-				// Count:        -1,
-				DeviceIDs:    []string{"0"}, // especificar que es vol utilitzar la GPU 0
-				Capabilities: [][]string{{"compute", "utility", "gpu"}},
+	hostConfig := &container.HostConfig{
+		AutoRemove: true,
+		Resources: container.Resources{
+			DeviceRequests: []container.DeviceRequest{
+				{
+					Driver: "nvidia",
+					// Count:        -1,
+					DeviceIDs:    []string{"0"}, // especificar que es vol utilitzar la GPU 0
+					Capabilities: [][]string{{"compute", "utility"}},
+				},
 			},
 		},
-	}
-	hostConfig := &container.HostConfig{
-		Resources: resources,
 	}
 
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
@@ -38,10 +39,28 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Printf("id=%s\n", resp.ID)
 
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		panic(err)
 	}
+
+	go func(id string) {
+		logs, err := cli.ContainerLogs(ctx, id, types.ContainerLogsOptions{
+			ShowStdout: true,
+			ShowStderr: true,
+			Timestamps: true,
+			Follow:     true,
+			Tail:       "all",
+			Details:    true,
+		})
+
+		n, err := stdcopy.StdCopy(os.Stdout, os.Stderr, logs)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("read %d log bytes\n", n)
+	}(resp.ID)
 
 	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
 	select {
@@ -52,12 +71,5 @@ func main() {
 	case <-statusCh:
 	}
 
-	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
-	if err != nil {
-		panic(err)
-	}
-
-	if _, err := stdcopy.StdCopy(os.Stdout, os.Stderr, out); err != nil {
-		panic(err)
-	}
+	fmt.Printf("shutdown!\n")
 }
