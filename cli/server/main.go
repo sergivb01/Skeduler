@@ -21,11 +21,13 @@ func main() {
 	hostConfig := &container.HostConfig{
 		AutoRemove: true,
 		Resources: container.Resources{
+			CPUCount: 2,
+			Memory:   1024 * 1024 * 256, // 256mb
 			DeviceRequests: []container.DeviceRequest{
 				{
 					Driver: "nvidia",
 					// Count:        -1,
-					DeviceIDs:    []string{"0"}, // especificar que es vol utilitzar la GPU 0
+					DeviceIDs:    []string{"0"}, // especificar que es vol utilitzar la GPU 0, també podria ser "all"
 					Capabilities: [][]string{{"compute", "utility"}},
 				},
 			},
@@ -35,12 +37,19 @@ func main() {
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: "nvidia/cuda:11.0-base",
 		Cmd:   []string{"nvidia-smi"},
+		// Cmd:   []string{"top", "-n", "1", "-b"},
+		// Hostname: "hostname",
+		// Domainname: "",
+		Env: []string{
+			// TODO(@sergivb01): pas de variables entorn com ID de la tasca, prioritat, GPUs, ...
+			"SKEDULER_ID=test123",
+		},
 	}, hostConfig, nil, nil, "")
 	if err != nil {
 		panic(err)
 	}
 	containerID := resp.ID
-	fmt.Printf("id=%s\n", containerID)
+	fmt.Printf("id=%.7s\n", containerID)
 
 	if err := cli.ContainerStart(ctx, containerID, types.ContainerStartOptions{}); err != nil {
 		panic(err)
@@ -58,7 +67,7 @@ func main() {
 		panic(err)
 	}
 
-	f, err := os.OpenFile(fmt.Sprintf("./logs/%s.log", containerID), os.O_APPEND|os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(fmt.Sprintf("./logs/%.7s.log", containerID), os.O_APPEND|os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -79,7 +88,7 @@ func main() {
 			panic(err)
 		}
 	case s := <-statusCh:
-		fmt.Printf("container %s stopped with status code = %d and error = %q\n", containerID, s.StatusCode, s.Error)
+		fmt.Printf("container %.7s stopped with status code = %d and error = %q\n", containerID, s.StatusCode, s.Error)
 		break
 	}
 
