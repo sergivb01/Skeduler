@@ -26,6 +26,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer cli.Close()
 
 	tasks := make(chan JobRequest)
 	done := make(chan struct{}, len(conf.Queues))
@@ -45,7 +46,7 @@ func main() {
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-c
 
-	log.Printf("Starting gracefull shutdown. Waiting for all pending tasks to finish\n")
+	log.Printf("starting gracefull shutdown. Waiting for all pending tasks to finish\n")
 
 	// close http server
 	httpClose <- struct{}{}

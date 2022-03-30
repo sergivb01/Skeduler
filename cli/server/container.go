@@ -122,6 +122,7 @@ func (r *JobRequest) Run(ctx context.Context, cli *client.Client, gpus []string)
 	if err != nil {
 		return fmt.Errorf("getting logs: %w", err)
 	}
+	defer logs.Close()
 
 	f, err := os.OpenFile(fmt.Sprintf("./logs/%s.log", containerID), os.O_APPEND|os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
 	if err != nil {
@@ -129,15 +130,18 @@ func (r *JobRequest) Run(ctx context.Context, cli *client.Client, gpus []string)
 	}
 	defer f.Close()
 
+	doneLogs := make(chan struct{}, 1)
+
 	go func() {
 		w := bufio.NewWriter(f)
 		defer w.Flush()
 		n, err := stdcopy.StdCopy(w, w, logs)
 		if err != nil {
-			log.Printf("copying logs to file: %s\n", err)
+			log.Printf("error copying logs to file: %s\n", err)
 			return
 		}
 		log.Printf("read %d log bytes from %.7s\n", n, containerID)
+		doneLogs <- struct{}{}
 	}()
 
 	statusCh, errCh := cli.ContainerWait(ctx, containerID, container.WaitConditionNotRunning)
@@ -150,6 +154,8 @@ func (r *JobRequest) Run(ctx context.Context, cli *client.Client, gpus []string)
 		log.Printf("container %.7s stopped with status code = %d and error = %v\n", containerID, s.StatusCode, s.Error)
 		break
 	}
+
+	<-doneLogs
 
 	return nil
 }

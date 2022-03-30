@@ -45,7 +45,7 @@ func startHttp(tasks chan<- JobRequest, quit <-chan struct{}, conf HttpConfig) e
 		// We received an interrupt signal, shut down.
 		if err := srv.Shutdown(context.Background()); err != nil {
 			// Error from closing listeners, or context timeout:
-			log.Printf("HTTP server Shutdown: %v", err)
+			log.Printf("error http server shutdown: %v", err)
 		}
 		close(idleConnsClosed)
 	}()
@@ -53,7 +53,7 @@ func startHttp(tasks chan<- JobRequest, quit <-chan struct{}, conf HttpConfig) e
 	log.Printf("started http server: %s\n", conf.Listen)
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 		// Error starting or closing listener:
-		log.Printf("starting http server: %v\n", err)
+		log.Printf("error running http server: %v\n", err)
 	}
 
 	<-idleConnsClosed
