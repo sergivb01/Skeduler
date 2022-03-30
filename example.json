@@ -1,0 +1,13 @@
+{
+  "name": "HelloWorld",
+  "description": "Hello world!",
+  "request": {
+    "docker": {
+      "image": "nvidia/cuda:11.0-base",
+      "command": "nvidia-smi",
+      "environment": {
+        "TESTING": 123
+      }
+    }
+  }
+}
