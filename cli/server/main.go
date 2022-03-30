@@ -52,7 +52,7 @@ func main() {
 	wg.Wait()
 	// close and wait for workers to finish current running jobs
 	close(tasks)
-	for _, _ = range conf.Queues {
+	for range conf.Queues {
 		<-done
 	}
 

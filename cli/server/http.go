@@ -10,8 +10,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-const listenAddr = ":8080"
-
 func handleRequest(tasks chan<- JobRequest) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var jobRequest JobRequest
@@ -20,8 +18,11 @@ func handleRequest(tasks chan<- JobRequest) http.HandlerFunc {
 			return
 		}
 
-		log.Printf("scheduled task at %s\n", time.Now())
 		schedule(tasks, jobRequest)
+		log.Printf("scheduled %+v task at %s\n", jobRequest, time.Now())
+
+		_, _ = w.Write([]byte("OK"))
+		w.WriteHeader(http.StatusOK)
 	}
 }
 

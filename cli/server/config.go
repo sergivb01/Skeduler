@@ -10,9 +10,9 @@ import (
 
 type HttpConfig struct {
 	Listen       string        `yaml:"listen"`
-	WriteTimeout time.Duration `yaml:"writeTimeout"`
-	ReadTimeout  time.Duration `yaml:"readTimeout"`
-	IdleTimeout  time.Duration `yaml:"idleTimeout"`
+	WriteTimeout time.Duration `yaml:"write_timeout"`
+	ReadTimeout  time.Duration `yaml:"read_timeout"`
+	IdleTimeout  time.Duration `yaml:"idle_timeout"`
 }
 
 type QueueConfig struct {

@@ -1,8 +1,8 @@
 http:
   listen: ":8080"
-  writeTimeout: "15s"
-  readTimeout: "15s"
-  idleTimeout: "15s"
+  write_timeout: "15s"
+  read_timeout: "15s"
+  idle_timeout: "15s"
 
 queues:
   - gpu: "all"
