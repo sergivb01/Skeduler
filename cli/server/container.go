@@ -34,7 +34,7 @@ type JobRequest struct {
 func NewFromFile(filename string) (*JobRequest, error) {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return nil, fmt.Errorf("reading config file: %w", err)
+		return nil, fmt.Errorf("reading spec file: %w", err)
 	}
 
 	var r JobRequest
@@ -42,26 +42,10 @@ func NewFromFile(filename string) (*JobRequest, error) {
 		return nil, fmt.Errorf("unmarshaling json: %w", err)
 	}
 
-	return &r, err
+	return &r, nil
 }
 
 func (r *JobRequest) Run(ctx context.Context, cli *client.Client, gpus []string) error {
-	hostConfig := &container.HostConfig{
-		AutoRemove: true,
-		Resources: container.Resources{
-			// CPUCount: 2,
-			// Memory:   1024 * 1024 * 256, // 256mb
-			DeviceRequests: []container.DeviceRequest{
-				{
-					Driver: "nvidia",
-					// Count:        -1,
-					DeviceIDs:    gpus, // especificar que es vol utilitzar la GPU 0, també podria ser "all"
-					Capabilities: [][]string{{"compute", "utility"}},
-				},
-			},
-		},
-	}
-
 	reader, err := cli.ImagePull(ctx, r.Request.Docker.Image, types.ImagePullOptions{})
 	if err != nil {
 		return fmt.Errorf("pulling docker image: %w", err)
@@ -83,6 +67,22 @@ func (r *JobRequest) Run(ctx context.Context, cli *client.Client, gpus []string)
 		// Hostname: "hostname",
 		// Domainname: "",
 		Env: env,
+	}
+
+	hostConfig := &container.HostConfig{
+		AutoRemove: true,
+		Resources: container.Resources{
+			// CPUCount: 2,
+			// Memory:   1024 * 1024 * 256, // 256mb
+			DeviceRequests: []container.DeviceRequest{
+				{
+					Driver: "nvidia",
+					// Count:        -1,
+					DeviceIDs:    gpus, // especificar que es vol utilitzar la GPU 0, també podria ser "all"
+					Capabilities: [][]string{{"compute", "utility"}},
+				},
+			},
+		},
 	}
 
 	resp, err := cli.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, "")
@@ -131,7 +131,7 @@ func (r *JobRequest) Run(ctx context.Context, cli *client.Client, gpus []string)
 			panic(err)
 		}
 	case s := <-statusCh:
-		fmt.Printf("container %.7s stopped with status code = %d and error = %q\n", containerID, s.StatusCode, s.Error)
+		log.Printf("container %.7s stopped with status code = %d and error = %v\n", containerID, s.StatusCode, s.Error)
 		break
 	}
 

@@ -1,0 +1,9 @@
+http:
+  listen: ":8080"
+  writeTimeout: "15s"
+  readTimeout: "15s"
+  idleTimeout: "15s"
+
+queues:
+  - gpu: "all"
+  - gpu: "all"

@@ -5,15 +5,12 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
 )
 
 const listenAddr = ":8080"
-
-var wg = &sync.WaitGroup{}
 
 func handleRequest(tasks chan<- JobRequest) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -28,23 +25,18 @@ func handleRequest(tasks chan<- JobRequest) http.HandlerFunc {
 	}
 }
 
-type httpServer struct {
-	http *http.Server
-}
-
-func startHttp(tasks chan<- JobRequest, quit <-chan struct{}) error {
+func startHttp(tasks chan<- JobRequest, quit <-chan struct{}, conf HttpConfig) error {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/", handleRequest(tasks)).Methods("POST")
 
 	srv := &http.Server{
-		Addr:         listenAddr,
-		WriteTimeout: time.Second * 10,
-		ReadTimeout:  time.Second * 15,
-		IdleTimeout:  time.Second * 15,
+		Addr:         conf.Listen,
+		WriteTimeout: conf.WriteTimeout,
+		ReadTimeout:  conf.ReadTimeout,
+		IdleTimeout:  conf.IdleTimeout,
 		Handler:      r,
 	}
-	// /////////////////////////////////////////////
 
 	idleConnsClosed := make(chan struct{})
 	go func() {
@@ -58,13 +50,13 @@ func startHttp(tasks chan<- JobRequest, quit <-chan struct{}) error {
 		close(idleConnsClosed)
 	}()
 
+	log.Printf("started http server: %s\n", conf.Listen)
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 		// Error starting or closing listener:
-		log.Printf("starting http server: %v", err)
+		log.Printf("starting http server: %v\n", err)
 	}
 
 	<-idleConnsClosed
 
-	// /////////////////////////
 	return nil
 }

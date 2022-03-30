@@ -6,44 +6,36 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/docker/docker/client"
 )
 
-const N_WORKERS = 2
+var wg = &sync.WaitGroup{}
 
-func runExample(jobs chan<- JobRequest) {
-	t, err := NewFromFile("example.json")
+func main() {
+	conf, err := FromFile("config.yml")
 	if err != nil {
 		panic(err)
 	}
-	log.Printf("waiting for 1s\n")
-	time.Sleep(time.Second * 1)
+	fmt.Printf("%+v\n", conf)
 
-	log.Printf("scheduling...\n")
-	for i := 0; i < 5; i++ {
-		schedule(jobs, *t)
-	}
-}
-
-func main() {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		panic(err)
 	}
 
 	tasks := make(chan JobRequest)
-	done := make(chan struct{}, N_WORKERS)
-	for i := 0; i < N_WORKERS; i++ {
-		go startWorker(cli, tasks, done, "all")
+	done := make(chan struct{}, len(conf.Queues))
+	for _, q := range conf.Queues {
+		go startWorker(cli, tasks, done, q.GPU)
 	}
 
-	go runExample(tasks)
 	httpClose := make(chan struct{}, 1)
 	go func() {
-		err := startHttp(tasks, httpClose)
+		err := startHttp(tasks, httpClose, conf.Http)
 		if err != nil {
 			log.Printf("error server: %s\n", err)
 		}
@@ -52,26 +44,25 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-c
+
+	// close http server
 	httpClose <- struct{}{}
 	log.Printf("Starting gracefull shutdown. Waiting for all pending tasks to finish\n")
 
 	wg.Wait()
 	// close and wait for workers to finish current running jobs
 	close(tasks)
-	for i := 0; i < N_WORKERS; i++ {
+	for _, _ = range conf.Queues {
 		<-done
 	}
 
-	fmt.Printf("shutdown!\n")
+	log.Printf("shutdown!\n")
 }
 
 func schedule(tasks chan<- JobRequest, j JobRequest) {
 	go func() {
 		wg.Add(1)
-		select {
-		case tasks <- j:
-		}
-
+		tasks <- j
 		wg.Done()
 	}()
 }
