@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -43,8 +44,25 @@ func NewFromFile(filename string) (*JobRequest, error) {
 	return &r, nil
 }
 
+func authCredentials(username, password string) (string, error) {
+	authConfig := types.AuthConfig{
+		Username: username,
+		Password: password,
+	}
+
+	encodedJSON, err := json.Marshal(authConfig)
+	if err != nil {
+		return "", fmt.Errorf("marshaling authconfig to json: %w", err)
+	}
+
+	return base64.URLEncoding.EncodeToString(encodedJSON), nil
+}
+
 func (r *JobRequest) Run(ctx context.Context, cli *client.Client, gpus []string) error {
-	reader, err := cli.ImagePull(ctx, r.Docker.Image, types.ImagePullOptions{})
+	reader, err := cli.ImagePull(ctx, r.Docker.Image, types.ImagePullOptions{
+		// TODO(@sergivb01): pas de registre autenticació amb funció de authCredentials
+		RegistryAuth: "",
+	})
 	if err != nil {
 		return fmt.Errorf("pulling docker image: %w", err)
 	}

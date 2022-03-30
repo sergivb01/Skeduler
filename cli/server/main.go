@@ -45,13 +45,18 @@ func main() {
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-c
 
-	// close http server
-	httpClose <- struct{}{}
 	log.Printf("Starting gracefull shutdown. Waiting for all pending tasks to finish\n")
 
+	// close http server
+	httpClose <- struct{}{}
+
+	// wait for running experiments to finish
 	wg.Wait()
-	// close and wait for workers to finish current running jobs
+
+	// close workers, they are all done now
 	close(tasks)
+
+	// wait for workers to close
 	for range conf.Queues {
 		<-done
 	}
