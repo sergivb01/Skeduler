@@ -26,9 +26,7 @@ type Docker struct {
 type JobRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
-	Request     struct {
-		Docker Docker `json:"docker"`
-	} `json:"request"`
+	Docker      Docker `json:"docker"`
 }
 
 func NewFromFile(filename string) (*JobRequest, error) {
@@ -46,23 +44,23 @@ func NewFromFile(filename string) (*JobRequest, error) {
 }
 
 func (r *JobRequest) Run(ctx context.Context, cli *client.Client, gpus []string) error {
-	reader, err := cli.ImagePull(ctx, r.Request.Docker.Image, types.ImagePullOptions{})
+	reader, err := cli.ImagePull(ctx, r.Docker.Image, types.ImagePullOptions{})
 	if err != nil {
 		return fmt.Errorf("pulling docker image: %w", err)
 	}
 	_, _ = io.Copy(ioutil.Discard, reader)
 
 	// TODO(@sergivb01): pas de variables entorn com ID de la tasca, prioritat, GPUs, ...
-	r.Request.Docker.Environment["SKEDULER_ID"] = "test12345"
+	r.Docker.Environment["SKEDULER_ID"] = "test12345"
 
 	var env []string
-	for k, v := range r.Request.Docker.Environment {
+	for k, v := range r.Docker.Environment {
 		env = append(env, fmt.Sprintf("%s=%v", k, v))
 	}
 
-	cmd := strings.Split(r.Request.Docker.Command, " ")
+	cmd := strings.Split(r.Docker.Command, " ")
 	containerConfig := &container.Config{
-		Image: r.Request.Docker.Image,
+		Image: r.Docker.Image,
 		Cmd:   cmd,
 		// Hostname: "hostname",
 		// Domainname: "",
@@ -121,14 +119,14 @@ func (r *JobRequest) Run(ctx context.Context, cli *client.Client, gpus []string)
 			log.Printf("copying logs to file: %s\n", err)
 			return
 		}
-		log.Printf("read %d log bytes\n", n)
+		log.Printf("read %d log bytes from %.7s\n", n, containerID)
 	}()
 
 	statusCh, errCh := cli.ContainerWait(ctx, containerID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errCh:
 		if err != nil {
-			panic(err)
+			log.Printf("error reading logs from %.7s: %v", containerID, err)
 		}
 	case s := <-statusCh:
 		log.Printf("container %.7s stopped with status code = %d and error = %v\n", containerID, s.StatusCode, s.Error)
