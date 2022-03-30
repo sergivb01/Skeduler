@@ -22,7 +22,6 @@ func handleRequest(tasks chan<- JobRequest) http.HandlerFunc {
 		log.Printf("scheduled %+v task at %s\n", jobRequest, time.Now())
 
 		_, _ = w.Write([]byte("OK"))
-		w.WriteHeader(http.StatusOK)
 	}
 }
 

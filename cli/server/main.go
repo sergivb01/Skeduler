@@ -29,8 +29,8 @@ func main() {
 
 	tasks := make(chan JobRequest)
 	done := make(chan struct{}, len(conf.Queues))
-	for _, q := range conf.Queues {
-		go startWorker(cli, tasks, done, q.GPU)
+	for i, q := range conf.Queues {
+		go startWorker(cli, tasks, done, i, q.GPUs)
 	}
 
 	httpClose := make(chan struct{}, 1)
@@ -67,10 +67,10 @@ func schedule(tasks chan<- JobRequest, j JobRequest) {
 	}()
 }
 
-func startWorker(cli *client.Client, reqs <-chan JobRequest, quit chan<- struct{}, gpu string) {
+func startWorker(cli *client.Client, reqs <-chan JobRequest, quit chan<- struct{}, id int, gpus []string) {
 	for t := range reqs {
-		log.Printf("[%s] worker running task\n", time.Now())
-		if err := t.Run(context.TODO(), cli, []string{gpu}); err != nil {
+		log.Printf("[%d] worker running task %+v at %s\n", id, t, time.Now())
+		if err := t.Run(context.TODO(), cli, gpus); err != nil {
 			log.Printf("error running task: %s", err)
 		}
 	}

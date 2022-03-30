@@ -5,5 +5,5 @@ http:
   idle_timeout: "15s"
 
 queues:
-  - gpu: "all"
-  - gpu: "all"
+  - gpus: ["all"]
+  - gpus: ["all"]

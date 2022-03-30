@@ -16,7 +16,7 @@ type HttpConfig struct {
 }
 
 type QueueConfig struct {
-	GPU string `yaml:"gpu"`
+	GPUs []string `yaml:"gpus"`
 }
 
 type Config struct {
