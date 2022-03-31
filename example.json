@@ -5,7 +5,9 @@
     "image": "nvidia/cuda:11.0-base",
     "command": "nvidia-smi",
     "environment": {
-      "TESTING": 123
+      "ENV_EXAMPLE": "test=123",
+      "ENV_TEST": 1234,
+      "ENV_ABC": "samplee"
     }
   }
 }

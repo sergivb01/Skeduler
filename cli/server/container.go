@@ -59,6 +59,9 @@ func authCredentials(username, password string) (string, error) {
 }
 
 func (r *JobRequest) Run(ctx context.Context, cli *client.Client, gpus []string) error {
+	// TODO(@sergivb01): posar tots els experiments en una mateixa xarxa de docker
+
+	// la variable reader conté el progrés/log del pull de la imatge.
 	reader, err := cli.ImagePull(ctx, r.Docker.Image, types.ImagePullOptions{
 		// TODO(@sergivb01): pas de registre autenticació amb funció de authCredentials
 		RegistryAuth: "",
@@ -66,6 +69,7 @@ func (r *JobRequest) Run(ctx context.Context, cli *client.Client, gpus []string)
 	if err != nil {
 		return fmt.Errorf("pulling docker image: %w", err)
 	}
+	// TODO(@sergivb01): quan es passi a IDs "nostres", guardar "reader" al fitxer de log
 	_, _ = io.Copy(ioutil.Discard, reader)
 
 	// TODO(@sergivb01): pas de variables entorn com ID de la tasca, prioritat, GPUs, ...
@@ -80,6 +84,7 @@ func (r *JobRequest) Run(ctx context.Context, cli *client.Client, gpus []string)
 	containerConfig := &container.Config{
 		Image: r.Docker.Image,
 		Cmd:   cmd,
+		// TODO(@sergivb01): canviar el hostname i el domini per alguna cosa més significativa
 		// Hostname: "hostname",
 		// Domainname: "",
 		Env: env,
@@ -131,7 +136,6 @@ func (r *JobRequest) Run(ctx context.Context, cli *client.Client, gpus []string)
 	defer f.Close()
 
 	doneLogs := make(chan struct{}, 1)
-
 	go func() {
 		w := bufio.NewWriter(f)
 		defer w.Flush()
