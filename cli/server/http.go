@@ -2,33 +2,36 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/mux"
 )
 
-func handleRequest(tasks chan<- JobRequest) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var jobRequest JobRequest
-		if err := json.NewDecoder(r.Body).Decode(&jobRequest); err != nil {
-			http.Error(w, "error decoding json", http.StatusBadRequest)
-			return
+// func handleRequest(tasks chan<- JobRequest) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		var jobRequest JobRequest
+// 		if err := json.NewDecoder(r.Body).Decode(&jobRequest); err != nil {
+// 			http.Error(w, "error decoding json", http.StatusBadRequest)
+// 			return
+// 		}
+//
+// 		schedule(tasks, jobRequest)
+// 		log.Printf("scheduled %+v task at %s\n", jobRequest, time.Now())
+//
+// 		_, _ = w.Write([]byte("OK"))
+// 	}
+// }
+
+func startHttp(quit <-chan struct{}, conf HttpConfig) error {
+	a := func() http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("OK"))
 		}
-
-		schedule(tasks, jobRequest)
-		log.Printf("scheduled %+v task at %s\n", jobRequest, time.Now())
-
-		_, _ = w.Write([]byte("OK"))
 	}
-}
-
-func startHttp(tasks chan<- JobRequest, quit <-chan struct{}, conf HttpConfig) error {
 	r := mux.NewRouter()
 
-	r.HandleFunc("/", handleRequest(tasks)).Methods("POST")
+	r.HandleFunc("/", a()).Methods("POST")
 
 	srv := &http.Server{
 		Addr:         conf.Listen,

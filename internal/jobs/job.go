@@ -1,4 +1,4 @@
-package main
+package jobs
 
 import (
 	"bufio"
@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -24,19 +25,34 @@ type Docker struct {
 	Environment map[string]interface{} `json:"environment"`
 }
 
-type JobRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Docker      Docker `json:"docker"`
+type JobStatus string
+
+const (
+	Enqueued  JobStatus = "ENQUEUED"
+	Running   JobStatus = "RUNNING"
+	Done      JobStatus = "DONE"
+	Cancelled JobStatus = "CANCELLED"
+)
+
+type ID int64
+
+type Job struct {
+	ID          ID        `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Docker      Docker    `json:"docker"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Status      JobStatus `json:"status"`
 }
 
-func NewFromFile(filename string) (*JobRequest, error) {
+func NewFromFile(filename string) (*Job, error) {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("reading spec file: %w", err)
 	}
 
-	var r JobRequest
+	var r Job
 	if err := json.Unmarshal(b, &r); err != nil {
 		return nil, fmt.Errorf("unmarshaling json: %w", err)
 	}
@@ -58,31 +74,51 @@ func authCredentials(username, password string) (string, error) {
 	return base64.URLEncoding.EncodeToString(encodedJSON), nil
 }
 
-func (r *JobRequest) Run(ctx context.Context, cli *client.Client, gpus []string) error {
+func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string) error {
 	// TODO(@sergivb01): posar tots els experiments en una mateixa xarxa de docker
 
+	logFile, err := os.OpenFile(fmt.Sprintf("./logs/%v.log", j.ID), os.O_APPEND|os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("creating logs file: %w", err)
+	}
+	logWriter := bufio.NewWriter(logFile)
+
+	defer func() {
+		if err := logWriter.Flush(); err != nil {
+			log.Printf("error flushing logs for %v: %s\n", j.ID, err)
+		}
+		if err := logFile.Close(); err != nil {
+			log.Printf("error closing log file for %v: %s\n", j.ID, err)
+		}
+	}()
+
 	// la variable reader conté el progrés/log del pull de la imatge.
-	reader, err := cli.ImagePull(ctx, r.Docker.Image, types.ImagePullOptions{
+	reader, err := cli.ImagePull(ctx, j.Docker.Image, types.ImagePullOptions{
 		// TODO(@sergivb01): pas de registre autenticació amb funció de authCredentials
 		RegistryAuth: "",
 	})
 	if err != nil {
 		return fmt.Errorf("pulling docker image: %w", err)
 	}
-	// TODO(@sergivb01): quan es passi a IDs "nostres", guardar "reader" al fitxer de log
-	_, _ = io.Copy(ioutil.Discard, reader)
+	if _, err := io.Copy(logWriter, reader); err != nil {
+		log.Printf("error copying pull output to log for %v: %v\n", j.ID, err)
+	}
 
-	// TODO(@sergivb01): pas de variables entorn com ID de la tasca, prioritat, GPUs, ...
-	r.Docker.Environment["SKEDULER_ID"] = "test12345"
+	// pas de variables entorn com ID de la tasca, prioritat, GPUs, ...
+	j.Docker.Environment["SKEDULER_ID"] = j.ID
+	j.Docker.Environment["SKEDULER_NAME"] = j.Name
+	j.Docker.Environment["SKEDULER_DESCRIPTION"] = j.Description
+	j.Docker.Environment["SKEDULER_DOCKER_IMAGE"] = j.Docker.Image
+	j.Docker.Environment["SKEDULER_DOCKER_GPUS"] = fmt.Sprintf("%s", gpus)
 
 	var env []string
-	for k, v := range r.Docker.Environment {
+	for k, v := range j.Docker.Environment {
 		env = append(env, fmt.Sprintf("%s=%v", k, v))
 	}
 
-	cmd := strings.Split(r.Docker.Command, " ")
+	cmd := strings.Split(j.Docker.Command, " ")
 	containerConfig := &container.Config{
-		Image: r.Docker.Image,
+		Image: j.Docker.Image,
 		Cmd:   cmd,
 		// TODO(@sergivb01): canviar el hostname i el domini per alguna cosa més significativa
 		// Hostname: "hostname",
@@ -129,22 +165,14 @@ func (r *JobRequest) Run(ctx context.Context, cli *client.Client, gpus []string)
 	}
 	defer logs.Close()
 
-	f, err := os.OpenFile(fmt.Sprintf("./logs/%s.log", containerID), os.O_APPEND|os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("creating logs file: %w", err)
-	}
-	defer f.Close()
-
 	doneLogs := make(chan struct{}, 1)
 	go func() {
-		w := bufio.NewWriter(f)
-		defer w.Flush()
-		n, err := stdcopy.StdCopy(w, w, logs)
+		n, err := stdcopy.StdCopy(logWriter, logWriter, logs)
 		if err != nil {
 			log.Printf("error copying logs to file: %s\n", err)
 			return
 		}
-		log.Printf("read %d log bytes from %.7s\n", n, containerID)
+		log.Printf("read %d log bytes from %s\n", n, containerID)
 		doneLogs <- struct{}{}
 	}()
 
@@ -152,10 +180,10 @@ func (r *JobRequest) Run(ctx context.Context, cli *client.Client, gpus []string)
 	select {
 	case err := <-errCh:
 		if err != nil {
-			log.Printf("error reading logs from %.7s: %v", containerID, err)
+			log.Printf("error reading logs from %s: %v", containerID, err)
 		}
 	case s := <-statusCh:
-		log.Printf("container %.7s stopped with status code = %d and error = %v\n", containerID, s.StatusCode, s.Error)
+		log.Printf("container %s stopped with status code = %d and error = %v\n", containerID, s.StatusCode, s.Error)
 		break
 	}
 

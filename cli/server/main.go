@@ -6,14 +6,13 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
 	"github.com/docker/docker/client"
+	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/database"
+	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
-
-var wg = &sync.WaitGroup{}
 
 func main() {
 	conf, err := FromFile("config.yml")
@@ -28,19 +27,27 @@ func main() {
 	}
 	defer cli.Close()
 
-	tasks := make(chan JobRequest)
-	done := make(chan struct{}, len(conf.Queues))
+	db, err := database.NewSqlite("database.db")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	tasks := make(chan jobs.Job, len(conf.Queues))
+	waitWkEnd := make(chan struct{}, len(conf.Queues))
 	for i, q := range conf.Queues {
-		go startWorker(cli, tasks, done, i, q.GPUs)
+		go startWorker(cli, tasks, waitWkEnd, i, q.GPUs)
 	}
 
-	httpClose := make(chan struct{}, 1)
+	closing := make(chan struct{}, 2)
 	go func() {
-		err := startHttp(tasks, httpClose, conf.Http)
+		err := startHttp(closing, conf.Http)
 		if err != nil {
 			log.Printf("error server: %s\n", err)
 		}
 	}()
+
+	go puller(tasks, closing, db)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
@@ -48,32 +55,51 @@ func main() {
 
 	log.Printf("starting gracefull shutdown. Waiting for all pending tasks to finish\n")
 
-	// close http server
-	httpClose <- struct{}{}
-
-	// wait for running experiments to finish
-	wg.Wait()
-
-	// close workers, they are all done now
+	// close workers, they won't work anymore
 	close(tasks)
+
+	// notify to close http & puller
+	for i := 0; i < len(closing); i++ {
+		closing <- struct{}{}
+	}
+
+	// wait http and puller
+	for i := 0; i < len(closing); i++ {
+		<-closing
+	}
 
 	// wait for workers to close
 	for range conf.Queues {
-		<-done
+		<-waitWkEnd
 	}
 
 	log.Printf("shutdown!\n")
 }
 
-func schedule(tasks chan<- JobRequest, j JobRequest) {
-	go func() {
-		wg.Add(1)
-		tasks <- j
-		wg.Done()
-	}()
+func puller(tasks chan<- jobs.Job, closing <-chan struct{}, db database.Database) {
+	t := time.Tick(time.Second * 3)
+	for {
+		select {
+		case <-closing:
+			return
+		case <-t:
+			if len(tasks) != cap(tasks) {
+				job, err := db.GetJob(context.TODO())
+				if err != nil {
+					log.Printf("error pulling: %v\n", err)
+				}
+				if job == nil {
+					continue
+				}
+				tasks <- *job
+			}
+
+			break
+		}
+	}
 }
 
-func startWorker(cli *client.Client, reqs <-chan JobRequest, quit chan<- struct{}, id int, gpus []string) {
+func startWorker(cli *client.Client, reqs <-chan jobs.Job, quit chan<- struct{}, id int, gpus []string) {
 	for t := range reqs {
 		log.Printf("[%d] worker running task %+v at %s\n", id, t, time.Now())
 		if err := t.Run(context.TODO(), cli, gpus); err != nil {
