@@ -17,6 +17,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/gofrs/uuid"
 )
 
 type Docker struct {
@@ -34,10 +35,8 @@ const (
 	Cancelled JobStatus = "CANCELLED"
 )
 
-type ID int64
-
 type Job struct {
-	ID          ID        `json:"id"`
+	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	Docker      Docker    `json:"docker"`
