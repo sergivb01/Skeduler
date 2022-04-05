@@ -21,9 +21,9 @@ import (
 )
 
 type Docker struct {
-	Image       string                 `json:"image"`
-	Command     string                 `json:"command"`
-	Environment map[string]interface{} `json:"environment"`
+	Image       string                 `json:"image" db:"docker_image"`
+	Command     string                 `json:"command" db:"docker_command"`
+	Environment map[string]interface{} `json:"environment" db:"docker_environment"`
 }
 
 type JobStatus string
@@ -36,13 +36,13 @@ const (
 )
 
 type Job struct {
-	ID          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Docker      Docker    `json:"docker"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	Status      JobStatus `json:"status"`
+	ID          uuid.UUID `json:"id" db:"id"`
+	Name        string    `json:"name" db:"name"`
+	Description string    `json:"description" db:"description"`
+	Docker      Docker    `json:"docker" db:"docker_embedded"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	Status      JobStatus `json:"status" db:"status"`
 }
 
 func NewFromFile(filename string) (*Job, error) {

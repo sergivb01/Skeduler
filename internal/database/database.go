@@ -9,10 +9,10 @@ import (
 
 type Database interface {
 	FetchJob(context.Context) (*jobs.Job, error)
-	GetJobById(context.Context, uuid.UUID) (jobs.Job, error)
+	GetJobById(context.Context, uuid.UUID) (*jobs.Job, error)
 
-	PutJob(context.Context, jobs.Job) (uuid.UUID, error)
-	Update(context.Context, uuid.UUID) error
+	PutJob(context.Context, *jobs.Job) error
+	Update(context.Context, *jobs.Job) error
 
 	Close() error
 }
