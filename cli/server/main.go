@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -25,7 +26,7 @@ func main() {
 	}
 	defer cli.Close()
 
-	db, err := database.NewPostgres("postgres://skeduler:skeduler1234@localhost:5432/skeduler")
+	db, err := database.NewPostgres(context.Background(), "postgres://skeduler:skeduler1234@localhost:5432/skeduler")
 	if err != nil {
 		panic(err)
 	}

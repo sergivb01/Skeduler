@@ -20,7 +20,7 @@ type postgresDb struct {
 
 var _ Database = &postgresDb{}
 
-func NewPostgres(uri string) (*postgresDb, error) {
+func NewPostgres(ctx context.Context, uri string) (*postgresDb, error) {
 	pgxconfig, err := pgxpool.ParseConfig(uri)
 	if err != nil {
 		return nil, fmt.Errorf("parsing db uri: %w", err)
@@ -39,12 +39,12 @@ func NewPostgres(uri string) (*postgresDb, error) {
 		return nil
 	}
 
-	db, err := pgxpool.ConnectConfig(context.TODO(), pgxconfig)
+	db, err := pgxpool.ConnectConfig(ctx, pgxconfig)
 	if err != nil {
 		return nil, fmt.Errorf("connecting postgres: %w", err)
 	}
 
-	if err := db.Ping(context.TODO()); err != nil {
+	if err := db.Ping(ctx); err != nil {
 		return nil, fmt.Errorf("pining postgres: %w", err)
 	}
 
@@ -105,7 +105,6 @@ func (p postgresDb) InsertJob(ctx context.Context, job *jobs.Job) error {
 }
 
 func (p postgresDb) Update(ctx context.Context, job *jobs.Job) error {
-	// TODO(@sergivb01): use res
 	err := p.runQuery(ctx, job, `UPDATE jobs
 		SET name = $2, description = $3, docker_image = $4, docker_command = $5, docker_environment = $6, updated_at = current_timestamp, status = $7, metadata = $8
 		WHERE id = $1

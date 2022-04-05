@@ -109,7 +109,10 @@ func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string) error 
 	j.Docker.Environment["SKEDULER_NAME"] = j.Name
 	j.Docker.Environment["SKEDULER_DESCRIPTION"] = j.Description
 	j.Docker.Environment["SKEDULER_DOCKER_IMAGE"] = j.Docker.Image
-	j.Docker.Environment["SKEDULER_DOCKER_GPUS"] = fmt.Sprintf("%s", gpus)
+	j.Docker.Environment["SKEDULER_DOCKER_COMMAND"] = j.Docker.Command
+	j.Docker.Environment["SKEDULER_CREATEDAT"] = j.CreatedAt
+	j.Docker.Environment["SKEDULER_METADATA"] = j.Metadata
+	j.Docker.Environment["SKEDULER_GPUS"] = fmt.Sprintf("%s", gpus)
 
 	var env []string
 	for k, v := range j.Docker.Environment {
