@@ -51,7 +51,7 @@ func handleGet(db database.Database) http.HandlerFunc {
 	}
 }
 
-func getLogs() http.HandlerFunc {
+func handleLogs() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id, err := uuid.FromString(vars["id"])
@@ -73,12 +73,24 @@ func getLogs() http.HandlerFunc {
 	}
 }
 
+func handleLogsTail() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// p, ok := w.(http.Pusher)
+		// if !ok {
+		// 	http.Error(w, "No pusher", http.StatusBadRequest)
+		// 	return
+		// }
+		// p.Push("/")
+	}
+}
+
 func startHttp(quit <-chan struct{}, conf HttpConfig, db database.Database) error {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/", handlePost(db)).Methods("POST")
 	r.HandleFunc("/{id}", handleGet(db)).Methods("GET")
-	r.HandleFunc("/logs/{id}", getLogs()).Methods("GET")
+	r.HandleFunc("/logs/{id}", handleLogs()).Methods("GET")
+	r.HandleFunc("/logs/{id}/tail", handleLogs()).Methods("GET")
 
 	srv := &http.Server{
 		Addr:         conf.Listen,
