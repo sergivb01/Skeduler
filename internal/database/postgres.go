@@ -64,7 +64,7 @@ func (p postgresDb) FetchJob(ctx context.Context) (*jobs.Job, error) {
 		        FOR UPDATE SKIP LOCKED
 		    LIMIT 1)
 		RETURNING id, name, description, docker_image AS "docker_embedded.docker_image", docker_command AS "docker_embedded.docker_command",
-		    docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status
+		    docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status, metadata
     `)
 
 	if err != nil {
@@ -80,7 +80,7 @@ func (p postgresDb) FetchJob(ctx context.Context) (*jobs.Job, error) {
 func (p postgresDb) GetJobById(ctx context.Context, id uuid.UUID) (*jobs.Job, error) {
 	var job jobs.Job
 	err := p.runQuery(ctx, &job, `SELECT id, name, description, docker_image AS "docker_embedded.docker_image", docker_command AS "docker_embedded.docker_command",
-       docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status
+       docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status, metadata
        FROM jobs
        WHERE id = $1`, id)
 
@@ -92,10 +92,10 @@ func (p postgresDb) GetJobById(ctx context.Context, id uuid.UUID) (*jobs.Job, er
 }
 
 func (p postgresDb) InsertJob(ctx context.Context, job *jobs.Job) error {
-	err := p.runQuery(ctx, job, `INSERT INTO jobs (name, description, docker_image, docker_command, docker_environment) VALUES ($1, $2, $3, $4, $5)
+	err := p.runQuery(ctx, job, `INSERT INTO jobs (name, description, docker_image, docker_command, docker_environment, metadata) VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, name, description, docker_image AS "docker_embedded.docker_image", docker_command AS "docker_embedded.docker_command",
-       		docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status`,
-		job.Name, job.Description, job.Docker.Image, job.Docker.Command, job.Docker.Environment)
+       		docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status, metadata`,
+		job.Name, job.Description, job.Docker.Image, job.Docker.Command, job.Docker.Environment, job.Metadata)
 
 	if err != nil {
 		return fmt.Errorf("inserting job: %w", err)
@@ -107,11 +107,11 @@ func (p postgresDb) InsertJob(ctx context.Context, job *jobs.Job) error {
 func (p postgresDb) Update(ctx context.Context, job *jobs.Job) error {
 	// TODO(@sergivb01): use res
 	err := p.runQuery(ctx, job, `UPDATE jobs
-		SET name = $2, description = $3, docker_image = $4, docker_command = $5, docker_environment = $6, updated_at = current_timestamp, status = $7
+		SET name = $2, description = $3, docker_image = $4, docker_command = $5, docker_environment = $6, updated_at = current_timestamp, status = $7, metadata = $8
 		WHERE id = $1
 		RETURNING id, name, description, docker_image AS "docker_embedded.docker_image", docker_command AS "docker_embedded.docker_command",
-       		docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status`,
-		job.ID, job.Name, job.Description, job.Docker.Image, job.Docker.Command, job.Docker.Environment, job.Status)
+       		docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status, metadata`,
+		job.ID, job.Name, job.Description, job.Docker.Image, job.Docker.Command, job.Docker.Environment, job.Status, job.Metadata)
 	if err != nil {
 		return fmt.Errorf("updating job: %w", err)
 	}

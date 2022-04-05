@@ -36,13 +36,14 @@ const (
 )
 
 type Job struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	Name        string    `json:"name" db:"name"`
-	Description string    `json:"description" db:"description"`
-	Docker      Docker    `json:"docker" db:"docker_embedded"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
-	Status      JobStatus `json:"status" db:"status"`
+	ID          uuid.UUID   `json:"id" db:"id"`
+	Name        string      `json:"name" db:"name"`
+	Description string      `json:"description" db:"description"`
+	Docker      Docker      `json:"docker" db:"docker_embedded"`
+	CreatedAt   time.Time   `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time   `json:"updated_at" db:"updated_at"`
+	Status      JobStatus   `json:"status" db:"status"`
+	Metadata    interface{} `json:"metadata" db:"metadata"`
 }
 
 func NewFromFile(filename string) (*Job, error) {
