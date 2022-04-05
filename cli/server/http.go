@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
@@ -49,11 +51,34 @@ func handleGet(db database.Database) http.HandlerFunc {
 	}
 }
 
+func getLogs() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		id, err := uuid.FromString(vars["id"])
+		if err != nil {
+			http.Error(w, "invalid uuid", http.StatusBadRequest)
+			return
+		}
+
+		f, err := os.OpenFile(fmt.Sprintf("./logs/%v.log", id), os.O_RDONLY, 0644)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error opening log file: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		if _, err := io.Copy(w, f); err != nil {
+			http.Error(w, fmt.Sprintf("error copying log file to body: %v", err), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
 func startHttp(quit <-chan struct{}, conf HttpConfig, db database.Database) error {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/", handlePost(db)).Methods("POST")
 	r.HandleFunc("/{id}", handleGet(db)).Methods("GET")
+	r.HandleFunc("/logs/{id}", getLogs()).Methods("GET")
 
 	srv := &http.Server{
 		Addr:         conf.Listen,
