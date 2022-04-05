@@ -52,9 +52,10 @@ func NewPostgres(uri string) (*postgresDb, error) {
 }
 
 func (p postgresDb) FetchJob(ctx context.Context) (*jobs.Job, error) {
-	rows, err := p.db.Query(ctx, `UPDATE jobs
+	var job jobs.Job
+	err := p.runQuery(ctx, &job, `UPDATE jobs
 		SET status     = 'RUNNING'::job_status,
-		    updated_at = now()
+		    updated_at = current_timestamp
 		WHERE id = (
 		    SELECT id
 		    FROM jobs
@@ -65,51 +66,52 @@ func (p postgresDb) FetchJob(ctx context.Context) (*jobs.Job, error) {
 		RETURNING id, name, description, docker_image AS "docker_embedded.docker_image", docker_command AS "docker_embedded.docker_command",
 		    docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status
     `)
-	if err != nil {
-		return nil, fmt.Errorf("querying for job: %w\n", err)
-	}
-	defer rows.Close()
 
-	var job jobs.Job
-	if err := jobFromRows(rows, &job); err != nil {
-		return nil, fmt.Errorf("scanning rows from fetch: %w", err)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("fetching job: %w", err)
 	}
 
 	return &job, nil
 }
 
 func (p postgresDb) GetJobById(ctx context.Context, id uuid.UUID) (*jobs.Job, error) {
-	rows, err := p.db.Query(ctx, `SELECT id, name, description, docker_image AS "docker_embedded.docker_image", docker_command AS "docker_embedded.docker_command",
+	var job jobs.Job
+	err := p.runQuery(ctx, &job, `SELECT id, name, description, docker_image AS "docker_embedded.docker_image", docker_command AS "docker_embedded.docker_command",
        docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status
        FROM jobs
        WHERE id = $1`, id)
-	if err != nil {
-		return nil, fmt.Errorf("selecting job by id: %w", err)
-	}
-	defer rows.Close()
 
-	var job jobs.Job
-	if err := jobFromRows(rows, &job); err != nil {
-		return nil, fmt.Errorf("scanning rows from select: %w", err)
+	if err != nil {
+		return nil, fmt.Errorf("getting job by id: %w", err)
 	}
 
 	return &job, nil
 }
 
-func (p postgresDb) PutJob(ctx context.Context, job *jobs.Job) error {
-	rows, err := p.db.Query(ctx, `INSERT INTO jobs (name, description, docker_image, docker_command, docker_environment) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+func (p postgresDb) InsertJob(ctx context.Context, job *jobs.Job) error {
+	err := p.runQuery(ctx, job, `INSERT INTO jobs (name, description, docker_image, docker_command, docker_environment) VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, name, description, docker_image AS "docker_embedded.docker_image", docker_command AS "docker_embedded.docker_command",
+       		docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status`,
 		job.Name, job.Description, job.Docker.Image, job.Docker.Command, job.Docker.Environment)
+
 	if err != nil {
-		return fmt.Errorf("inserting new job: %w", err)
+		return fmt.Errorf("inserting job: %w", err)
 	}
 
-	return jobFromRows(rows, job)
+	return nil
 }
 
 func (p postgresDb) Update(ctx context.Context, job *jobs.Job) error {
 	// TODO(@sergivb01): use res
-	_, err := p.db.Exec(ctx, `UPDATE jobs SET name = $2, description = $3, docker_image = $4, docker_command = $5, docker_environment = $6, updated_at = now() WHERE id = $1`,
-		job.ID, job.Name, job.Description, job.Docker.Image, job.Docker.Command, job.Docker.Environment)
+	err := p.runQuery(ctx, job, `UPDATE jobs
+		SET name = $2, description = $3, docker_image = $4, docker_command = $5, docker_environment = $6, updated_at = current_timestamp, status = $7
+		WHERE id = $1
+		RETURNING id, name, description, docker_image AS "docker_embedded.docker_image", docker_command AS "docker_embedded.docker_command",
+       		docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status`,
+		job.ID, job.Name, job.Description, job.Docker.Image, job.Docker.Command, job.Docker.Environment, job.Status)
 	if err != nil {
 		return fmt.Errorf("updating job: %w", err)
 	}
@@ -118,6 +120,19 @@ func (p postgresDb) Update(ctx context.Context, job *jobs.Job) error {
 
 func (p postgresDb) Close() error {
 	p.db.Close()
+	return nil
+}
+
+func (p postgresDb) runQuery(ctx context.Context, job *jobs.Job, query string, args ...interface{}) error {
+	rows, err := p.db.Query(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("running query: %w", err)
+	}
+	defer rows.Close()
+
+	if err := jobFromRows(rows, job); err != nil {
+		return fmt.Errorf("scanning rows: %w", err)
+	}
 	return nil
 }
 

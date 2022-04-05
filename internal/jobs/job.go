@@ -31,7 +31,7 @@ type JobStatus string
 const (
 	Enqueued  JobStatus = "ENQUEUED"
 	Running   JobStatus = "RUNNING"
-	Done      JobStatus = "DONE"
+	Finished  JobStatus = "FINISHED"
 	Cancelled JobStatus = "CANCELLED"
 )
 

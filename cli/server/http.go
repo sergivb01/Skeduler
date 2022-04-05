@@ -2,36 +2,58 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
+	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
+	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/database"
+	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
 
-// func handleRequest(tasks chan<- JobRequest) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		var jobRequest JobRequest
-// 		if err := json.NewDecoder(r.Body).Decode(&jobRequest); err != nil {
-// 			http.Error(w, "error decoding json", http.StatusBadRequest)
-// 			return
-// 		}
-//
-// 		schedule(tasks, jobRequest)
-// 		log.Printf("scheduled %+v task at %s\n", jobRequest, time.Now())
-//
-// 		_, _ = w.Write([]byte("OK"))
-// 	}
-// }
-
-func startHttp(quit <-chan struct{}, conf HttpConfig) error {
-	a := func() http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("OK"))
+func handlePost(db database.Database) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var jobRequest jobs.Job
+		if err := json.NewDecoder(r.Body).Decode(&jobRequest); err != nil {
+			http.Error(w, "error decoding json", http.StatusBadRequest)
+			return
 		}
+
+		if err := db.InsertJob(r.Context(), &jobRequest); err != nil {
+			http.Error(w, fmt.Sprintf("error inserting job: %v\n", err), http.StatusInternalServerError)
+			return
+		}
+
+		_ = json.NewEncoder(w).Encode(jobRequest)
 	}
+}
+
+func handleGet(db database.Database) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		id, err := uuid.FromString(vars["id"])
+		if err != nil {
+			http.Error(w, "invalid uuid", http.StatusBadRequest)
+			return
+		}
+
+		job, err := db.GetJobById(r.Context(), id)
+		if err != nil {
+			http.Error(w, "job does not exist", http.StatusNotFound)
+			return
+		}
+
+		_ = json.NewEncoder(w).Encode(job)
+	}
+}
+
+func startHttp(quit <-chan struct{}, conf HttpConfig, db database.Database) error {
 	r := mux.NewRouter()
 
-	r.HandleFunc("/", a()).Methods("POST")
+	r.HandleFunc("/", handlePost(db)).Methods("POST")
+	r.HandleFunc("/{id}", handleGet(db)).Methods("GET")
 
 	srv := &http.Server{
 		Addr:         conf.Listen,

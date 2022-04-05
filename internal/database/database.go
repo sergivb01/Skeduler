@@ -8,10 +8,13 @@ import (
 )
 
 type Database interface {
+	// FetchJob gets a job and updates its status to "RUNNING"
 	FetchJob(context.Context) (*jobs.Job, error)
+
+	// GetJobById returns a job given an id
 	GetJobById(context.Context, uuid.UUID) (*jobs.Job, error)
 
-	PutJob(context.Context, *jobs.Job) error
+	InsertJob(context.Context, *jobs.Job) error
 	Update(context.Context, *jobs.Job) error
 
 	Close() error
