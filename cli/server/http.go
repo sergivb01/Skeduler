@@ -117,8 +117,8 @@ func handleLogsTail() http.HandlerFunc {
 				}
 
 				text := line.Text
-				if strings.Contains(text, jobs.MAGIC_END) {
-					text = strings.TrimSuffix(text, jobs.MAGIC_END)
+				if strings.Contains(text, jobs.MagicEnd) {
+					text = strings.TrimSuffix(text, jobs.MagicEnd)
 					_, _ = w.Write([]byte(fmt.Sprintf("%s\n", text)))
 					return
 				}

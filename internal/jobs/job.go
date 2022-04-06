@@ -45,7 +45,7 @@ type Job struct {
 	Metadata    interface{} `json:"metadata" db:"metadata"`
 }
 
-const MAGIC_END = "_#$#$#$<END>#$#$#$_"
+const MagicEnd = "_#$#$#$<END>#$#$#$_"
 
 func NewFromFile(filename string) (*Job, error) {
 	b, err := ioutil.ReadFile(filename)
@@ -102,7 +102,7 @@ func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string) error 
 	}()
 
 	defer func() {
-		_, _ = logWriter.Write([]byte(MAGIC_END))
+		_, _ = logWriter.Write([]byte(MagicEnd))
 		_, _ = logWriter.Write([]byte{'\n'})
 		if err := logWriter.Flush(); err != nil {
 			log.Printf("error flushing logs for %v: %s\n", j.ID, err)
