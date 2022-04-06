@@ -104,13 +104,20 @@ func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string) error 
 		log.Printf("error copying pull output to log for %v: %v\n", j.ID, err)
 	}
 
-	// pas de variables entorn com ID de la tasca, prioritat, GPUs, ...
-	j.Docker.Environment["SKEDULER_ID"] = j.ID
-	j.Docker.Environment["SKEDULER_NAME"] = j.Name
-	j.Docker.Environment["SKEDULER_DESCRIPTION"] = j.Description
-	j.Docker.Environment["SKEDULER_DOCKER_IMAGE"] = j.Docker.Image
-	j.Docker.Environment["SKEDULER_DOCKER_COMMAND"] = j.Docker.Command
+	// establir variables d'entorn que també volem guardar a la base de dades
 	j.Docker.Environment["SKEDULER_GPUS"] = fmt.Sprintf("%s", gpus)
+
+	envNew := make(map[string]interface{})
+	for k, v := range j.Docker.Environment {
+		envNew[k] = v
+	}
+
+	// pas de variables entorn com ID de la tasca, prioritat, GPUs, ...
+	envNew["SKEDULER_ID"] = j.ID
+	envNew["SKEDULER_NAME"] = j.Name
+	envNew["SKEDULER_DESCRIPTION"] = j.Description
+	envNew["SKEDULER_DOCKER_IMAGE"] = j.Docker.Image
+	envNew["SKEDULER_DOCKER_COMMAND"] = j.Docker.Command
 
 	var env []string
 	for k, v := range j.Docker.Environment {
