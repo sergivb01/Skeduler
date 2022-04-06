@@ -9,37 +9,31 @@ package main
 // )
 //
 // func main() {
-// 	db, err := database.NewSqlite("database.db")
+// 	db, err := database.NewPostgres("postgres://skeduler:skeduler1234@localhost:5432/skeduler")
 // 	if err != nil {
 // 		panic(err)
 // 	}
 //
-// 	j := &jobs.Job{
-// 		Name:        "testing 123",
-// 		Description: "descriptionn",
+// 	job := &jobs.Job{
+// 		Name:        "test example",
+// 		Description: "test example description",
 // 		Docker: jobs.Docker{
 // 			Image:   "nvidia/cuda:11.0-base",
 // 			Command: "nvidia-smi",
 // 			Environment: map[string]interface{}{
-// 				"TEST": 123,
-// 				"ABC":  "awdawd",
+// 				"TEST": 1234,
 // 			},
 // 		},
 // 	}
-//
-// 	res, err := db.PutJob(context.Background(), *j)
+// 	err = db.InsertJob(context.TODO(), job)
 // 	if err != nil {
 // 		panic(err)
 // 	}
-// 	fmt.Printf("result from insert = %+v\n", res)
 //
-// 	j2, err := db.GetJob(context.Background())
+// 	job2, err := db.FetchJob(context.TODO())
 // 	if err != nil {
 // 		panic(err)
 // 	}
-// 	fmt.Printf("result from get = %+v\n", j2)
-//
-// 	if err := db.UpdateStatus(context.Background(), j2.ID, jobs.Done); err != nil {
-// 		panic(err)
-// 	}
+// 	fmt.Printf("Job1: %+v\n", job)
+// 	fmt.Printf("Job2: %+v\n", job2)
 // }

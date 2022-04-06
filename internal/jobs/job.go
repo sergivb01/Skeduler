@@ -17,12 +17,13 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/gofrs/uuid"
 )
 
 type Docker struct {
-	Image       string                 `json:"image"`
-	Command     string                 `json:"command"`
-	Environment map[string]interface{} `json:"environment"`
+	Image       string                 `json:"image" db:"docker_image"`
+	Command     string                 `json:"command" db:"docker_command"`
+	Environment map[string]interface{} `json:"environment" db:"docker_environment"`
 }
 
 type JobStatus string
@@ -30,20 +31,19 @@ type JobStatus string
 const (
 	Enqueued  JobStatus = "ENQUEUED"
 	Running   JobStatus = "RUNNING"
-	Done      JobStatus = "DONE"
+	Finished  JobStatus = "FINISHED"
 	Cancelled JobStatus = "CANCELLED"
 )
 
-type ID int64
-
 type Job struct {
-	ID          ID        `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Docker      Docker    `json:"docker"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	Status      JobStatus `json:"status"`
+	ID          uuid.UUID   `json:"id" db:"id"`
+	Name        string      `json:"name" db:"name"`
+	Description string      `json:"description" db:"description"`
+	Docker      Docker      `json:"docker" db:"docker_embedded"`
+	CreatedAt   time.Time   `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time   `json:"updated_at" db:"updated_at"`
+	Status      JobStatus   `json:"status" db:"status"`
+	Metadata    interface{} `json:"metadata" db:"metadata"`
 }
 
 func NewFromFile(filename string) (*Job, error) {
@@ -109,7 +109,8 @@ func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string) error 
 	j.Docker.Environment["SKEDULER_NAME"] = j.Name
 	j.Docker.Environment["SKEDULER_DESCRIPTION"] = j.Description
 	j.Docker.Environment["SKEDULER_DOCKER_IMAGE"] = j.Docker.Image
-	j.Docker.Environment["SKEDULER_DOCKER_GPUS"] = fmt.Sprintf("%s", gpus)
+	j.Docker.Environment["SKEDULER_DOCKER_COMMAND"] = j.Docker.Command
+	j.Docker.Environment["SKEDULER_GPUS"] = fmt.Sprintf("%s", gpus)
 
 	var env []string
 	for k, v := range j.Docker.Environment {

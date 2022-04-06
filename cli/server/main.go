@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/docker/docker/client"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/database"
@@ -15,7 +14,7 @@ import (
 )
 
 func main() {
-	conf, err := FromFile("config.yml")
+	conf, err := configFromFile("config.yml")
 	if err != nil {
 		panic(err)
 	}
@@ -27,7 +26,8 @@ func main() {
 	}
 	defer cli.Close()
 
-	db, err := database.NewSqlite("database.db")
+	db, err := database.NewPostgres(context.Background(), "postgres://skeduler:skeduler1234@localhost:5432/skeduler")
+	// db, err := database.NewSqlite("database.db")
 	if err != nil {
 		panic(err)
 	}
@@ -35,14 +35,22 @@ func main() {
 
 	tasks := make(chan jobs.Job, len(conf.Queues))
 	waitWkEnd := make(chan struct{}, len(conf.Queues))
-	for i, q := range conf.Queues {
-		go startWorker(cli, tasks, waitWkEnd, i, q.GPUs)
+	for i, wConf := range conf.Queues {
+		a := worker{
+			id:   i,
+			cli:  cli,
+			db:   db,
+			reqs: tasks,
+			quit: waitWkEnd,
+			gpus: wConf.GPUs,
+		}
+		go a.start()
 	}
 
+	// 2 per http i el puller
 	closing := make(chan struct{}, 2)
 	go func() {
-		err := startHttp(closing, conf.Http)
-		if err != nil {
+		if err := startHttp(closing, conf.Http, db); err != nil {
 			log.Printf("error server: %s\n", err)
 		}
 	}()
@@ -74,37 +82,4 @@ func main() {
 	}
 
 	log.Printf("shutdown!\n")
-}
-
-func puller(tasks chan<- jobs.Job, closing <-chan struct{}, db database.Database) {
-	t := time.Tick(time.Second * 3)
-	for {
-		select {
-		case <-closing:
-			return
-		case <-t:
-			if len(tasks) != cap(tasks) {
-				job, err := db.GetJob(context.TODO())
-				if err != nil {
-					log.Printf("error pulling: %v\n", err)
-				}
-				if job == nil {
-					continue
-				}
-				tasks <- *job
-			}
-
-			break
-		}
-	}
-}
-
-func startWorker(cli *client.Client, reqs <-chan jobs.Job, quit chan<- struct{}, id int, gpus []string) {
-	for t := range reqs {
-		log.Printf("[%d] worker running task %+v at %s\n", id, t, time.Now())
-		if err := t.Run(context.TODO(), cli, gpus); err != nil {
-			log.Printf("error running task: %s", err)
-		}
-	}
-	quit <- struct{}{}
 }
