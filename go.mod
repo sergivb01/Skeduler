@@ -8,6 +8,7 @@ require (
 	github.com/gofrs/uuid v4.2.0+incompatible
 	github.com/jackc/pgtype v1.10.0
 	github.com/jackc/pgx/v4 v4.15.0
+	github.com/mattn/go-sqlite3 v1.14.12
 )
 
 require (

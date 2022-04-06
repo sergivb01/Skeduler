@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	conf, err := FromFile("config.yml")
+	conf, err := configFromFile("config.yml")
 	if err != nil {
 		panic(err)
 	}
@@ -27,6 +27,7 @@ func main() {
 	defer cli.Close()
 
 	db, err := database.NewPostgres(context.Background(), "postgres://skeduler:skeduler1234@localhost:5432/skeduler")
+	// db, err := database.NewSqlite("database.db")
 	if err != nil {
 		panic(err)
 	}
@@ -46,10 +47,10 @@ func main() {
 		go a.start()
 	}
 
+	// 2 per http i el puller
 	closing := make(chan struct{}, 2)
 	go func() {
-		err := startHttp(closing, conf.Http, db)
-		if err != nil {
+		if err := startHttp(closing, conf.Http, db); err != nil {
 			log.Printf("error server: %s\n", err)
 		}
 	}()

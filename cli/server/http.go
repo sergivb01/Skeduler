@@ -75,6 +75,7 @@ func handleLogs() http.HandlerFunc {
 
 func handleLogsTail() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		// p, ok := w.(http.Pusher)
 		// if !ok {
 		// 	http.Error(w, "No pusher", http.StatusBadRequest)
