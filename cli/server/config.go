@@ -24,7 +24,7 @@ type Config struct {
 	Queues []QueueConfig `yaml:"queues"`
 }
 
-func FromFile(filename string) (*Config, error) {
+func configFromFile(filename string) (*Config, error) {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("reading config file: %w", err)
