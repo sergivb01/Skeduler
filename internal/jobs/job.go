@@ -77,6 +77,7 @@ func authCredentials(username, password string) (string, error) {
 
 func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string) error {
 	// TODO(@sergivb01): posar tots els experiments en una mateixa xarxa de docker
+	// TODO(@sergivb01): no fa pull d'imatges locals???
 	// la variable reader conté el progrés/log del pull de la imatge.
 	// reader, err := cli.ImagePull(ctx, j.Docker.Image, types.ImagePullOptions{
 	// 	// TODO(@sergivb01): pas de registre autenticació amb funció de authCredentials
@@ -165,13 +166,16 @@ func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string) error 
 	if err != nil {
 		return fmt.Errorf("creating container: %w", err)
 	}
+	for _, warning := range resp.Warnings {
+		_, _ = fmt.Fprintf(logWriter, "[CONTAINER CREATE WARNING] %v\n", warning)
+	}
 	containerID := resp.ID
 
 	if err := cli.ContainerStart(ctx, containerID, types.ContainerStartOptions{}); err != nil {
 		return fmt.Errorf("starting container: %w", err)
 	}
 
-	logs, err := cli.ContainerLogs(ctx, containerID, types.ContainerLogsOptions{
+	containerLogs, err := cli.ContainerLogs(ctx, containerID, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Timestamps: true,
@@ -182,11 +186,11 @@ func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string) error 
 	if err != nil {
 		return fmt.Errorf("getting logs: %w", err)
 	}
-	defer logs.Close()
+	defer containerLogs.Close()
 
 	doneLogs := make(chan struct{}, 1)
 	go func() {
-		n, err := stdcopy.StdCopy(logWriter, logWriter, logs)
+		n, err := stdcopy.StdCopy(logWriter, logWriter, containerLogs)
 		if err != nil {
 			log.Printf("error copying logs to file: %s\n", err)
 			return
@@ -199,10 +203,10 @@ func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string) error 
 	select {
 	case err := <-errCh:
 		if err != nil {
-			log.Printf("error reading logs from %s: %v", containerID, err)
+			log.Printf("job %v with container %s recived error: %v", j.ID, containerID, err)
 		}
 	case s := <-statusCh:
-		log.Printf("container %s stopped with status code = %d and error = %v\n", containerID, s.StatusCode, s.Error)
+		log.Printf("job %v with container %s stopped with status code = %d and error = %v\n", j.ID, containerID, s.StatusCode, s.Error)
 		break
 	}
 
