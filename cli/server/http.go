@@ -8,9 +8,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
+	"github.com/hpcloud/tail"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/database"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
@@ -75,13 +78,54 @@ func handleLogs() http.HandlerFunc {
 
 func handleLogsTail() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			panic("expected http.ResponseWriter to be an http.Flusher")
+		}
+		defer flusher.Flush()
 
-		// p, ok := w.(http.Pusher)
-		// if !ok {
-		// 	http.Error(w, "No pusher", http.StatusBadRequest)
-		// 	return
-		// }
-		// p.Push("/")
+		vars := mux.Vars(r)
+		id, err := uuid.FromString(vars["id"])
+		if err != nil {
+			http.Error(w, "invalid uuid", http.StatusBadRequest)
+			return
+		}
+
+		t, err := tail.TailFile(fmt.Sprintf("./logs/%v.log", id), tail.Config{
+			ReOpen:    false,
+			MustExist: true,
+			Follow:    true,
+		})
+		if err != nil {
+			http.Error(w, "Error tailing: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+
+		tick := time.NewTicker(time.Millisecond * 500)
+		defer tick.Stop()
+		for {
+			select {
+			case <-tick.C:
+				flusher.Flush()
+				break
+			case line := <-t.Lines:
+				if err := line.Err; err != nil {
+					http.Error(w, "error tailing: "+err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				text := line.Text
+				if strings.Contains(text, jobs.MAGIC_END) {
+					text = strings.TrimSuffix(text, jobs.MAGIC_END)
+					_, _ = w.Write([]byte(fmt.Sprintf("%s\n", text)))
+					return
+				}
+				_, _ = w.Write([]byte(fmt.Sprintf("%s\n", text)))
+				break
+			}
+		}
 	}
 }
 
@@ -91,14 +135,15 @@ func startHttp(quit <-chan struct{}, conf HttpConfig, db database.Database) erro
 	r.HandleFunc("/", handlePost(db)).Methods("POST")
 	r.HandleFunc("/{id}", handleGet(db)).Methods("GET")
 	r.HandleFunc("/logs/{id}", handleLogs()).Methods("GET")
-	r.HandleFunc("/logs/{id}/tail", handleLogs()).Methods("GET")
+	r.HandleFunc("/logs/{id}/tail", handleLogsTail()).Methods("GET")
 
 	srv := &http.Server{
-		Addr:         conf.Listen,
-		WriteTimeout: conf.WriteTimeout,
-		ReadTimeout:  conf.ReadTimeout,
-		IdleTimeout:  conf.IdleTimeout,
-		Handler:      r,
+		Addr: conf.Listen,
+		// deshabilitat per poder fer streaming de logs
+		// WriteTimeout: conf.WriteTimeout,
+		ReadTimeout: conf.ReadTimeout,
+		IdleTimeout: conf.IdleTimeout,
+		Handler:     r,
 	}
 
 	idleConnsClosed := make(chan struct{})

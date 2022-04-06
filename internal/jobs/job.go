@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -46,6 +45,8 @@ type Job struct {
 	Metadata    interface{} `json:"metadata" db:"metadata"`
 }
 
+const MAGIC_END = "_#$#$#$<END>#$#$#$_"
+
 func NewFromFile(filename string) (*Job, error) {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -76,6 +77,14 @@ func authCredentials(username, password string) (string, error) {
 
 func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string) error {
 	// TODO(@sergivb01): posar tots els experiments en una mateixa xarxa de docker
+	// la variable reader conté el progrés/log del pull de la imatge.
+	// reader, err := cli.ImagePull(ctx, j.Docker.Image, types.ImagePullOptions{
+	// 	// TODO(@sergivb01): pas de registre autenticació amb funció de authCredentials
+	// 	// RegistryAuth: "",
+	// })
+	// if err != nil {
+	// 	return fmt.Errorf("pulling docker image: %w", err)
+	// }
 
 	logFile, err := os.OpenFile(fmt.Sprintf("./logs/%v.log", j.ID), os.O_APPEND|os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
 	if err != nil {
@@ -83,7 +92,17 @@ func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string) error 
 	}
 	logWriter := bufio.NewWriter(logFile)
 
+	t := time.NewTicker(time.Second)
+	defer t.Stop()
+	go func() {
+		for range t.C {
+			_ = logWriter.Flush()
+		}
+	}()
+
 	defer func() {
+		_, _ = logWriter.Write([]byte(MAGIC_END))
+		_, _ = logWriter.Write([]byte{'\n'})
 		if err := logWriter.Flush(); err != nil {
 			log.Printf("error flushing logs for %v: %s\n", j.ID, err)
 		}
@@ -92,17 +111,9 @@ func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string) error 
 		}
 	}()
 
-	// la variable reader conté el progrés/log del pull de la imatge.
-	reader, err := cli.ImagePull(ctx, j.Docker.Image, types.ImagePullOptions{
-		// TODO(@sergivb01): pas de registre autenticació amb funció de authCredentials
-		RegistryAuth: "",
-	})
-	if err != nil {
-		return fmt.Errorf("pulling docker image: %w", err)
-	}
-	if _, err := io.Copy(logWriter, reader); err != nil {
-		log.Printf("error copying pull output to log for %v: %v\n", j.ID, err)
-	}
+	// if _, err := io.Copy(logWriter, reader); err != nil {
+	// 	log.Printf("error copying pull output to log for %v: %v\n", j.ID, err)
+	// }
 
 	// establir variables d'entorn que també volem guardar a la base de dades
 	j.Docker.Environment["SKEDULER_GPUS"] = fmt.Sprintf("%s", gpus)
