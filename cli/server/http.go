@@ -20,6 +20,7 @@ import (
 
 func handlePost(db database.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
 		var jobRequest jobs.Job
 		if err := json.NewDecoder(r.Body).Decode(&jobRequest); err != nil {
 			http.Error(w, "error decoding json", http.StatusBadRequest)
@@ -32,6 +33,67 @@ func handlePost(db database.Database) http.HandlerFunc {
 		}
 
 		_ = json.NewEncoder(w).Encode(jobRequest)
+	}
+}
+
+func handlePut(db database.Database) http.HandlerFunc {
+	type updateBody struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Docker      struct {
+			Environment map[string]interface{} `json:"environment"`
+		} `json:"docker"`
+		Status   jobs.JobStatus `json:"status"`
+		Metadata interface{}    `json:"metadata"`
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		id, err := uuid.FromString(vars["id"])
+		if err != nil {
+			http.Error(w, "invalid uuid", http.StatusBadRequest)
+			return
+		}
+
+		job, err := db.GetJobById(r.Context(), id)
+		if err != nil {
+			http.Error(w, "job does not exist", http.StatusNotFound)
+			return
+		}
+
+		if job == nil {
+			http.Error(w, "Job with given ID not found", http.StatusNotFound)
+			return
+		}
+		fmt.Printf("%+v\n", job)
+
+		var changes updateBody
+		if err := json.NewDecoder(r.Body).Decode(&changes); err != nil {
+			http.Error(w, "Error decoding json: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if changes.Name != "" {
+			job.Name = changes.Name
+		}
+		if changes.Description != "" {
+			job.Description = changes.Description
+		}
+		if job.Docker.Environment != nil {
+			job.Docker.Environment = changes.Docker.Environment
+		}
+		if job.Status != "" {
+			job.Status = changes.Status
+		}
+		if job.Metadata != nil {
+			job.Metadata = changes.Metadata
+		}
+
+		if err := db.Update(r.Context(), job); err != nil {
+			http.Error(w, "Error updating job: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		_ = json.NewEncoder(w).Encode(job)
 	}
 }
 
@@ -49,6 +111,12 @@ func handleGet(db database.Database) http.HandlerFunc {
 			http.Error(w, "job does not exist", http.StatusNotFound)
 			return
 		}
+
+		if job == nil {
+			http.Error(w, "Job with given ID not found", http.StatusNotFound)
+			return
+		}
+		fmt.Printf("%+v\n", job)
 
 		_ = json.NewEncoder(w).Encode(job)
 	}
@@ -129,11 +197,12 @@ func handleLogsTail() http.HandlerFunc {
 	}
 }
 
-func startHttp(quit <-chan struct{}, conf HttpConfig, db database.Database) error {
+func startHttp(quit <-chan struct{}, conf HttpConfig, db database.Database, finished chan<- struct{}) error {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/", handlePost(db)).Methods("POST")
 	r.HandleFunc("/{id}", handleGet(db)).Methods("GET")
+	r.HandleFunc("/{id}", handlePut(db)).Methods("PUT")
 	r.HandleFunc("/logs/{id}", handleLogs()).Methods("GET")
 	r.HandleFunc("/logs/{id}/tail", handleLogsTail()).Methods("GET")
 
@@ -161,10 +230,11 @@ func startHttp(quit <-chan struct{}, conf HttpConfig, db database.Database) erro
 	log.Printf("started http server: %s\n", conf.Listen)
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 		// Error starting or closing listener:
-		log.Printf("error running http server: %v\n", err)
+		return fmt.Errorf("running http server: %w", err)
 	}
 
 	<-idleConnsClosed
+	finished <- struct{}{}
 
 	return nil
 }

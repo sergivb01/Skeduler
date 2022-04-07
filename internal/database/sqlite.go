@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gofrs/uuid"
@@ -17,7 +18,10 @@ type sqliteDb struct {
 	db *sql.DB
 }
 
-const timeFormat = "2006-01-02 15:04:05"
+const (
+	timeFormat = "2006-01-02 15:04:05"
+	envSplit   = "_#&#_"
+)
 
 var _ Database = sqliteDb{}
 
@@ -31,7 +35,6 @@ func NewSqlite(filename string) (*sqliteDb, error) {
 }
 
 func (s sqliteDb) FetchJob(ctx context.Context) (*jobs.Job, error) {
-	// TODO implement me
 	var job jobs.Job
 	err := s.runQuery(ctx, &job, `UPDATE jobs SET status = 'RUNNING', updated_at = strftime('%s', 'now')
 		WHERE rowid = (
@@ -134,4 +137,25 @@ func (s sqliteDb) runQuery(ctx context.Context, job *jobs.Job, query string, arg
 
 func (s sqliteDb) Close() error {
 	return s.db.Close()
+}
+
+func envToString(env map[string]interface{}) string {
+	var sb strings.Builder
+	for k, v := range env {
+		sb.WriteString(k)
+		sb.WriteRune('=')
+		sb.WriteString(fmt.Sprintf("%v", v))
+		sb.WriteString(envSplit)
+	}
+	return strings.TrimSuffix(sb.String(), envSplit)
+}
+
+func stringToEnv(val string) map[string]interface{} {
+	env := make(map[string]interface{})
+	for _, kv := range strings.Split(val, envSplit) {
+		parts := strings.SplitN(kv, "=", 2)
+		env[parts[0]] = parts[1]
+	}
+
+	return env
 }

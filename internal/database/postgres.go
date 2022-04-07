@@ -85,6 +85,9 @@ func (p postgresDb) GetJobById(ctx context.Context, id uuid.UUID) (*jobs.Job, er
        WHERE id = $1`, id)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("getting job by id: %w", err)
 	}
 
@@ -128,6 +131,10 @@ func (p postgresDb) runQuery(ctx context.Context, job *jobs.Job, query string, a
 		return fmt.Errorf("running query: %w", err)
 	}
 	defer rows.Close()
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("rows error: %w", err)
+	}
 
 	if err := jobFromRows(rows, job); err != nil {
 		return fmt.Errorf("scanning rows: %w", err)

@@ -15,13 +15,8 @@ type HttpConfig struct {
 	IdleTimeout  time.Duration `yaml:"idle_timeout"`
 }
 
-type QueueConfig struct {
-	GPUs []string `yaml:"gpus"`
-}
-
 type Config struct {
-	Http   HttpConfig    `yaml:"http"`
-	Queues []QueueConfig `yaml:"queues"`
+	Http HttpConfig `yaml:"http"`
 }
 
 func configFromFile(filename string) (*Config, error) {
