@@ -37,3 +37,12 @@ Desacoplar backend i els workers
     - https://grpc.io/
     - https://medium.com/safetycultureengineering/grpc-over-http-3-53f41fc0761e
     - https://github.com/grpc/grpc-web
+    - https://github.com/grpc/grpc-go/blob/master/Documentation/grpc-metadata.md
+    - https://grpc.io/docs/guides/auth/
+    - https://grpc.io/docs/what-is-grpc/introduction/
+    - https://levelup.gitconnected.com/grpc-how-to-make-client-streaming-calls-5c731197585
+    - https://grpc.io/docs/what-is-grpc/core-concepts/
+    - https://github.com/grpc/grpc-go/blob/master/Documentation/concurrency.md
+    - https://github.com/grpc/grpc-go/blob/master/Documentation/grpc-metadata.md
+    - https://github.com/grpc/grpc-go/blob/master/Documentation/grpc-auth-support.md
+    - https://github.com/grpc/grpc-go/blob/master/examples/features/authentication/server/main.go
