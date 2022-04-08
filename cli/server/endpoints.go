@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
 	"github.com/nxadm/tail"
+	"github.com/nxadm/tail/ratelimiter"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/database"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
@@ -179,9 +181,13 @@ func handleFollowLogs() http.HandlerFunc {
 		}
 
 		t, err := tail.TailFile(fmt.Sprintf("./logs/%v.log", id), tail.Config{
-			ReOpen:    false,
-			MustExist: true,
-			Follow:    true,
+			ReOpen:      false,
+			MustExist:   false, // podem fer el tail abans que existeixi l'execució
+			Follow:      true,
+			MaxLineSize: 0,
+			// TODO: configurar ratelimit
+			RateLimiter: ratelimiter.NewLeakyBucket(64, time.Second),
+			Logger:      nil,
 		})
 		if err != nil {
 			http.Error(w, "Error tailing: "+err.Error(), http.StatusInternalServerError)
@@ -191,15 +197,15 @@ func handleFollowLogs() http.HandlerFunc {
 
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 
-		tick := time.NewTicker(time.Millisecond * 500)
-		defer tick.Stop()
 		for {
 			select {
-			case <-tick.C:
-				flusher.Flush()
-				break
 			case line := <-t.Lines:
 				if err := line.Err; err != nil {
+					// TODO: extreure error
+					if err.Error() == "Too much log activity; waiting a second before resuming tailing" {
+						continue
+					}
+					log.Printf("err = %+v\n", err)
 					http.Error(w, "error tailing: "+err.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -208,9 +214,11 @@ func handleFollowLogs() http.HandlerFunc {
 				if strings.Contains(text, jobs.MagicEnd) {
 					text = strings.TrimSuffix(text, jobs.MagicEnd)
 					_, _ = w.Write([]byte(fmt.Sprintf("%s\n", text)))
+					flusher.Flush()
 					return
 				}
 				_, _ = w.Write([]byte(fmt.Sprintf("%s\n", text)))
+				flusher.Flush()
 				break
 			}
 		}
