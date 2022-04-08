@@ -37,7 +37,7 @@ func (w *worker) start() {
 }
 
 func puller(tasks chan<- jobs.Job, closing <-chan struct{}) {
-	t := time.NewTicker(time.Second * 3)
+	t := time.NewTicker(time.Second)
 	defer t.Stop()
 
 	for {

@@ -11,7 +11,7 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
-	"github.com/hpcloud/tail"
+	"github.com/nxadm/tail"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/database"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
@@ -85,7 +85,6 @@ func handleJobUpdate(db database.Database) http.HandlerFunc {
 			http.Error(w, "Job with given ID not found", http.StatusNotFound)
 			return
 		}
-		fmt.Printf("%+v\n", job)
 
 		var changes updateBody
 		if err := json.NewDecoder(r.Body).Decode(&changes); err != nil {
@@ -99,13 +98,13 @@ func handleJobUpdate(db database.Database) http.HandlerFunc {
 		if changes.Description != "" {
 			job.Description = changes.Description
 		}
-		if job.Docker.Environment != nil {
+		if changes.Docker.Environment != nil {
 			job.Docker.Environment = changes.Docker.Environment
 		}
-		if job.Status != "" {
+		if changes.Status != "" {
 			job.Status = changes.Status
 		}
-		if job.Metadata != nil {
+		if changes.Metadata != nil {
 			job.Metadata = changes.Metadata
 		}
 
@@ -137,7 +136,6 @@ func handleGetById(db database.Database) http.HandlerFunc {
 			http.Error(w, "Job with given ID not found", http.StatusNotFound)
 			return
 		}
-		fmt.Printf("%+v\n", job)
 
 		_ = json.NewEncoder(w).Encode(job)
 	}
@@ -189,6 +187,7 @@ func handleFollowLogs() http.HandlerFunc {
 			http.Error(w, "Error tailing: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
+		defer t.Cleanup()
 
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 
