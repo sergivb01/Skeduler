@@ -76,3 +76,6 @@ Desacoblar backend i els workers
     - https://github.com/googleapis/googleapis/blob/master/google/rpc/error_details.proto
     - https://medium.com/utility-warehouse-technology/advanced-grpc-error-usage-1b37398f0ff4
     - https://cloud.google.com/apis/design/errors
+    - https://www.reddit.com/r/golang/comments/epfryk/go_grpc_server_project_structure/
+    - https://sahansera.dev/building-grpc-server-go/
+    - https://medium.com/@nate510/structuring-go-grpc-microservices-dd176fdf28d0

@@ -16,7 +16,7 @@ RUN go mod verify
 
 COPY . .
 ENV GO111MODULE=on
-RUN CGO_ENABLED=0 GOOS=linux go build -o application -ldflags "-s -w" gitlab-bcds.udg.edu/sergivb01/skeduler/cli/server
+RUN CGO_ENABLED=0 GOOS=linux go build -o application -ldflags "-s -w" gitlab-bcds.udg.edu/sergivb01/skeduler/cmd/server
 
 #second stage
 FROM scratch
