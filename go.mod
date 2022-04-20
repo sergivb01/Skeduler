@@ -30,6 +30,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
+	github.com/tj/go-buffer v1.2.0 // indirect
 	golang.org/x/crypto v0.0.0-20220331220935-ae2d96664a29 // indirect
 	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f // indirect
 	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
