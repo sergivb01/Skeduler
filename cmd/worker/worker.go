@@ -1,13 +1,9 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"errors"
-	"io"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/docker/docker/client"
@@ -25,17 +21,11 @@ type worker struct {
 func (w *worker) start() {
 	for t := range w.reqs {
 		log.Printf("[%d] worker running task %+v at %s\n", w.id, t, time.Now())
-		uploader, err := w.logUploader(t.ID.String())
-		if err != nil {
-			log.Printf("error creating writer: %s", err)
+		if err := t.Run(context.TODO(), w.cli, w.gpus); err != nil {
+			log.Printf("error running task: %s", err)
 			t.Status = jobs.Cancelled
 		} else {
-			if err := t.Run(context.TODO(), w.cli, w.gpus, uploader); err != nil {
-				log.Printf("error running task: %s", err)
-				t.Status = jobs.Cancelled
-			} else {
-				t.Status = jobs.Finished
-			}
+			t.Status = jobs.Finished
 		}
 
 		// TODO: update
@@ -44,53 +34,6 @@ func (w *worker) start() {
 		}
 	}
 	w.quit <- struct{}{}
-}
-
-type dummyWriter struct {
-	id   string
-	mu   *sync.RWMutex
-	buff *bytes.Buffer
-}
-
-func (d *dummyWriter) Write(p []byte) (n int, err error) {
-
-	if d.buff.Len() > 10 {
-
-	}
-	return d.buff.Write(p)
-}
-
-func (d *dummyWriter) Close() {
-}
-
-func (w *worker) logUploader(id string) (io.Writer, error) {
-	a := &dummyWriter{
-		id:   "",
-		mu:   &sync.RWMutex{},
-		buff: bytes.NewBuffer(nil),
-	}
-	logWriter := bufio.NewWriter(a)
-
-	t := time.NewTicker(time.Second)
-	defer t.Stop()
-	go func() {
-		for range t.C {
-			_ = logWriter.Flush()
-		}
-	}()
-
-	defer func() {
-		_, _ = logWriter.Write([]byte(jobs.MagicEnd))
-		_, _ = logWriter.Write([]byte{'\n'})
-		if err := logWriter.Flush(); err != nil {
-			log.Printf("error flushing logs for %v: %s\n", id, err)
-		}
-		// if err := a.Close(); err != nil {
-		// 	log.Printf("error closing log file for %v: %s\n", j.ID, err)
-		// }
-	}()
-
-	return logWriter, nil
 }
 
 func puller(tasks chan<- jobs.Job, closing <-chan struct{}) {
