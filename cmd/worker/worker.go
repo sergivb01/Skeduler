@@ -17,7 +17,7 @@ type worker struct {
 	quit chan<- struct{}
 	gpus []string
 }
-d
+
 func (w *worker) start() {
 	for t := range w.reqs {
 		log.Printf("[%d] worker running task %+v at %s\n", w.id, t, time.Now())
