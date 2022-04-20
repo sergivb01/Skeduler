@@ -20,7 +20,7 @@ func startHttp(quit <-chan struct{}, conf HttpConfig, db database.Database, fini
 	r.HandleFunc("/logs/{id}/tail", handleFollowLogs()).Methods("GET")
 
 	r.HandleFunc("/workers/poll", handleWorkerFetch(db)).Methods("GET")
-	r.HandleFunc("/workers/logs", handleWorkerLogs(db)).Methods("PATCH")
+	r.HandleFunc("/workers/logs", handleWorkerLogs(db)).Methods("PUT")
 
 	srv := &http.Server{
 		Addr: conf.Listen,

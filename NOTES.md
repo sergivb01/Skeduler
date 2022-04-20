@@ -78,4 +78,5 @@ Desacoblar backend i els workers
     - https://cloud.google.com/apis/design/errors
     - https://www.reddit.com/r/golang/comments/epfryk/go_grpc_server_project_structure/
     - https://sahansera.dev/building-grpc-server-go/
-    - https://medium.com/@nate510/structuring-go-grpc-microservices-dd176fdf28d0
+  - https://medium.com/@nate510/structuring-go-grpc-microservices-dd176fdf28d0
+  - https://entgo.io/blog/2021/03/18/generating-a-grpc-server-with-ent/

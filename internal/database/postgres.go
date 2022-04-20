@@ -77,7 +77,7 @@ func (p postgresDb) FetchJob(ctx context.Context) (*jobs.Job, error) {
 	return &job, nil
 }
 
-func (p postgresDb) GetJobById(ctx context.Context, id uuid.UUID) (*jobs.Job, error) {
+func (p postgresDb) GetById(ctx context.Context, id uuid.UUID) (*jobs.Job, error) {
 	var job jobs.Job
 	err := p.runQuery(ctx, &job, `SELECT id, name, description, docker_image AS "docker_embedded.docker_image", docker_command AS "docker_embedded.docker_command",
        docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status, metadata
@@ -94,30 +94,32 @@ func (p postgresDb) GetJobById(ctx context.Context, id uuid.UUID) (*jobs.Job, er
 	return &job, nil
 }
 
-func (p postgresDb) InsertJob(ctx context.Context, job *jobs.Job) error {
+func (p postgresDb) Insert(ctx context.Context, params InsertParams) (*jobs.Job, error) {
+	job := &jobs.Job{}
 	err := p.runQuery(ctx, job, `INSERT INTO jobs (name, description, docker_image, docker_command, docker_environment, metadata) VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, name, description, docker_image AS "docker_embedded.docker_image", docker_command AS "docker_embedded.docker_command",
        		docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status, metadata`,
-		job.Name, job.Description, job.Docker.Image, job.Docker.Command, job.Docker.Environment, job.Metadata)
+		params.Name, params.Description, params.Docker.Image, params.Docker.Command, params.Docker.Environment, params.Metadata)
 
 	if err != nil {
-		return fmt.Errorf("inserting job: %w", err)
+		return nil, fmt.Errorf("inserting job: %w", err)
 	}
 
-	return nil
+	return job, nil
 }
 
-func (p postgresDb) Update(ctx context.Context, job *jobs.Job) error {
+func (p postgresDb) Update(ctx context.Context, params UpdateParams) (*jobs.Job, error) {
+	job := &jobs.Job{}
 	err := p.runQuery(ctx, job, `UPDATE jobs
-		SET name = $2, description = $3, docker_image = $4, docker_command = $5, docker_environment = $6, updated_at = current_timestamp, status = $7, metadata = $8
+		SET name = COALESCE(NULLIF($2, ''), name), description = COALESCE(NULLIF($3, ''), description), updated_at = current_timestamp, status = COALESCE(NULLIF($4::text, '')::job_status, status), metadata = COALESCE($5, metadata)
 		WHERE id = $1
 		RETURNING id, name, description, docker_image AS "docker_embedded.docker_image", docker_command AS "docker_embedded.docker_command",
        		docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status, metadata`,
-		job.ID, job.Name, job.Description, job.Docker.Image, job.Docker.Command, job.Docker.Environment, job.Status, job.Metadata)
+		params.Id, params.Name, params.Description, params.Status, params.Metadata)
 	if err != nil {
-		return fmt.Errorf("updating job: %w", err)
+		return nil, fmt.Errorf("updating job: %w", err)
 	}
-	return nil
+	return job, nil
 }
 
 func (p postgresDb) Close() error {

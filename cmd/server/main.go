@@ -35,6 +35,7 @@ func main() {
 	// 2 per http i el puller
 	closing := make(chan struct{}, 1)
 	waitClose := make(chan struct{}, 1)
+
 	go func() {
 		if err := startHttp(closing, conf.Http, db, waitClose); err != nil {
 			log.Printf("error server: %s\n", err)

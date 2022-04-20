@@ -44,31 +44,24 @@ func handleWorkerLogs(db database.Database) http.HandlerFunc {
 func handleNewJob(db database.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
-		var jobRequest jobs.Job
+		var jobRequest database.InsertParams
 		if err := json.NewDecoder(r.Body).Decode(&jobRequest); err != nil {
 			http.Error(w, "error decoding json", http.StatusBadRequest)
+			log.Printf("%+v\n", err)
 			return
 		}
 
-		if err := db.InsertJob(r.Context(), &jobRequest); err != nil {
+		job, err := db.Insert(r.Context(), jobRequest)
+		if err != nil {
 			http.Error(w, fmt.Sprintf("error inserting job: %v\n", err), http.StatusInternalServerError)
 			return
 		}
 
-		_ = json.NewEncoder(w).Encode(jobRequest)
+		_ = json.NewEncoder(w).Encode(job)
 	}
 }
 
 func handleJobUpdate(db database.Database) http.HandlerFunc {
-	type updateBody struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Docker      struct {
-			Environment map[string]interface{} `json:"environment"`
-		} `json:"docker"`
-		Status   jobs.JobStatus `json:"status"`
-		Metadata interface{}    `json:"metadata"`
-	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id, err := uuid.FromString(vars["id"])
@@ -77,40 +70,15 @@ func handleJobUpdate(db database.Database) http.HandlerFunc {
 			return
 		}
 
-		job, err := db.GetJobById(r.Context(), id)
-		if err != nil {
-			http.Error(w, "job does not exist", http.StatusNotFound)
-			return
-		}
-
-		if job == nil {
-			http.Error(w, "Job with given ID not found", http.StatusNotFound)
-			return
-		}
-
-		var changes updateBody
+		var changes database.UpdateParams
 		if err := json.NewDecoder(r.Body).Decode(&changes); err != nil {
 			http.Error(w, "Error decoding json: "+err.Error(), http.StatusBadRequest)
 			return
 		}
+		changes.Id = id
 
-		if changes.Name != "" {
-			job.Name = changes.Name
-		}
-		if changes.Description != "" {
-			job.Description = changes.Description
-		}
-		if changes.Docker.Environment != nil {
-			job.Docker.Environment = changes.Docker.Environment
-		}
-		if changes.Status != "" {
-			job.Status = changes.Status
-		}
-		if changes.Metadata != nil {
-			job.Metadata = changes.Metadata
-		}
-
-		if err := db.Update(r.Context(), job); err != nil {
+		job, err := db.Update(r.Context(), changes)
+		if err != nil {
 			http.Error(w, "Error updating job: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -128,7 +96,7 @@ func handleGetById(db database.Database) http.HandlerFunc {
 			return
 		}
 
-		job, err := db.GetJobById(r.Context(), id)
+		job, err := db.GetById(r.Context(), id)
 		if err != nil {
 			http.Error(w, "job does not exist", http.StatusNotFound)
 			return
