@@ -47,7 +47,7 @@ type Job struct {
 
 const MagicEnd = "_#$#$#$<END>#$#$#$_"
 
-var disableGpu = os.Getenv("SKEDULER_DISABLE_GPU") == ""
+var disableGpu = os.Getenv("SKEDULER_DISABLE_GPU") != ""
 
 func NewFromFile(filename string) (*Job, error) {
 	b, err := ioutil.ReadFile(filename)
