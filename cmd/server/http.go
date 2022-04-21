@@ -21,7 +21,7 @@ import (
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
 
-func startHttp(quit <-chan struct{}, conf HttpConfig, db database.Database, finished chan<- struct{}) error {
+func startHttp(quit <-chan struct{}, conf httpConfig, db database.Database, finished chan<- struct{}) error {
 	r := mux.NewRouter()
 
 	// TODO: afegir autenticació TOKEN_CLIENT

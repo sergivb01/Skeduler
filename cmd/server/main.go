@@ -15,15 +15,16 @@ import (
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/database"
 )
 
-type HttpConfig struct {
-	Listen       string        `yaml:"listen"`
-	WriteTimeout time.Duration `yaml:"write_timeout"`
-	ReadTimeout  time.Duration `yaml:"read_timeout"`
-	IdleTimeout  time.Duration `yaml:"idle_timeout"`
+type httpConfig struct {
+	Listen       string        `yaml:"listen" json:"listen"`
+	WriteTimeout time.Duration `yaml:"write_timeout" json:"writeTimeout"`
+	ReadTimeout  time.Duration `yaml:"read_timeout" json:"readTimeout"`
+	IdleTimeout  time.Duration `yaml:"idle_timeout" json:"idleTimeout"`
 }
 
 type conf struct {
-	Http HttpConfig `yaml:"http"`
+	Http     httpConfig `yaml:"http" json:"http"`
+	Database string     `yaml:"database" json:"database"`
 }
 
 var (
@@ -45,7 +46,7 @@ func main() {
 	}
 	defer cli.Close()
 
-	db, err := database.NewPostgres(context.Background(), "postgres://skeduler:skeduler1234@localhost:5432/skeduler")
+	db, err := database.NewPostgres(context.Background(), cfg.Database)
 	// db, err := database.NewSqlite("database.db")
 	if err != nil {
 		panic(err)
