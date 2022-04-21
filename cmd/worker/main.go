@@ -33,13 +33,14 @@ func main() {
 			reqs: tasks,
 			quit: waitWkEnd,
 			gpus: wConf.GPUs,
+			host: conf.Host,
 		}
 		go a.start()
 	}
 
 	// puller close
 	closing := make(chan struct{}, 1)
-	go puller(tasks, closing)
+	go puller(tasks, closing, conf.Host)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)

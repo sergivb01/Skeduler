@@ -1,14 +1,13 @@
 package jobs
 
 import (
-	"bufio"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
-	"os"
 	"strings"
 	"time"
 
@@ -75,7 +74,7 @@ func authCredentials(username, password string) (string, error) {
 	return base64.URLEncoding.EncodeToString(encodedJSON), nil
 }
 
-func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string) error {
+func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string, logWriter io.Writer) error {
 	// TODO(@sergivb01): posar tots els experiments en una mateixa xarxa de docker
 	// TODO(@sergivb01): no fa pull d'imatges locals???
 	// la variable reader conté el progrés/log del pull de la imatge.
@@ -86,31 +85,6 @@ func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string) error 
 	// if err != nil {
 	// 	return fmt.Errorf("pulling docker image: %w", err)
 	// }
-
-	logFile, err := os.OpenFile(fmt.Sprintf("./logs/%v.log", j.ID), os.O_APPEND|os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("creating logs file: %w", err)
-	}
-	logWriter := bufio.NewWriter(logFile)
-
-	t := time.NewTicker(time.Second)
-	defer t.Stop()
-	go func() {
-		for range t.C {
-			_ = logWriter.Flush()
-		}
-	}()
-
-	defer func() {
-		_, _ = logWriter.Write([]byte(MagicEnd))
-		_, _ = logWriter.Write([]byte{'\n'})
-		if err := logWriter.Flush(); err != nil {
-			log.Printf("error flushing logs for %v: %s\n", j.ID, err)
-		}
-		if err := logFile.Close(); err != nil {
-			log.Printf("error closing log file for %v: %s\n", j.ID, err)
-		}
-	}()
 
 	// if _, err := io.Copy(logWriter, reader); err != nil {
 	// 	log.Printf("error copying pull output to log for %v: %v\n", j.ID, err)

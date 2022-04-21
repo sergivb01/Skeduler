@@ -4,6 +4,10 @@ http:
   read_timeout: "15s"
   idle_timeout: "15s"
 
+host: "http://localhost:8080"
 queues:
-  - gpus: ["all"]
-  - gpus: ["all"]
+  - name: "gpu u"
+    gpus: [ "all" ]
+
+  - name: "gpu dos"
+    gpus: [ "all" ]

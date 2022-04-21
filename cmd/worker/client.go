@@ -8,8 +8,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
 
+	"github.com/gofrs/uuid"
+	"github.com/gorilla/websocket"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
 
@@ -19,8 +22,9 @@ var httpClient = &http.Client{
 	Timeout: 10 * time.Second,
 }
 
-func fetchJobs(ctx context.Context) (jobs.Job, error) {
-	req, err := http.NewRequest(http.MethodGet, "http://localhost:8080/workers/poll", nil)
+func fetchJobs(ctx context.Context, host string) (jobs.Job, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/workers/poll", host), nil)
+	req.Header.Set("User-Agent", "Skeduler-Puller/1.0")
 	if err != nil {
 		return jobs.Job{}, fmt.Errorf("creating get request: %w", err)
 	}
@@ -32,7 +36,7 @@ func fetchJobs(ctx context.Context) (jobs.Job, error) {
 	defer res.Body.Close()
 
 	switch res.StatusCode {
-	case http.StatusNotFound:
+	case http.StatusNoContent:
 		return jobs.Job{}, errNoJob
 
 	case http.StatusOK:
@@ -47,11 +51,14 @@ func fetchJobs(ctx context.Context) (jobs.Job, error) {
 	return jobs.Job{}, fmt.Errorf("server error, recived status code %d and body: %v", res.StatusCode, string(b))
 }
 
-func updateJob(ctx context.Context, job jobs.Job) error {
+func updateJob(ctx context.Context, host string, job jobs.Job) error {
 	buff := &bytes.Buffer{}
-	_ = json.NewEncoder(buff).Encode(job)
+	if err := json.NewEncoder(buff).Encode(job); err != nil {
+		return err
+	}
 
-	req, err := http.NewRequestWithContext(ctx, "PUT", fmt.Sprintf("http://localhost:8080/%s", job.ID), buff)
+	req, err := http.NewRequestWithContext(ctx, "PUT", fmt.Sprintf("%s/experiments/%s", host, job.ID), buff)
+	req.Header.Set("User-Agent", "Skeduler-Puller/1.0")
 	if err != nil {
 		return fmt.Errorf("creating post request: %w", err)
 	}
@@ -67,4 +74,17 @@ func updateJob(ctx context.Context, job jobs.Job) error {
 	b, _ := ioutil.ReadAll(res.Body)
 
 	return fmt.Errorf("server error, recived status code %d and body: %v", res.StatusCode, string(b))
+}
+
+func streamUploadLogs(ctx context.Context, host string, id uuid.UUID) (*websocket.Conn, error) {
+	u, _ := url.Parse(host)
+	u.Path = fmt.Sprintf("/logs/%s/upload", id)
+	u.Scheme = "ws"
+
+	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("dialing websocket: %w", err)
+	}
+
+	return conn, nil
 }

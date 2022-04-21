@@ -13,6 +13,7 @@ type QueueConfig struct {
 }
 
 type Config struct {
+	Host   string        `yaml:"host"`
 	Queues []QueueConfig `yaml:"queues"`
 }
 
