@@ -9,21 +9,31 @@ import (
 	"syscall"
 
 	"github.com/docker/docker/client"
+	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/config"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
 
 var (
-	confFlag = flag.String("config", "config.yml", "Configuration file path")
+	flagConfig = flag.String("config", "config.yml", "Configuration file path")
 )
+
+type QueueConfig struct {
+	GPUs []string `yaml:"gpus"`
+}
+
+type conf struct {
+	Host   string        `yaml:"host"`
+	Queues []QueueConfig `yaml:"queues"`
+}
 
 func main() {
 	flag.Parse()
 
-	conf, err := configFromFile(*confFlag)
+	cfg, err := config.DecodeFromFile[conf](*flagConfig)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Loaded worker configuration: %+v\n", conf)
+	fmt.Printf("Loaded worker configuration: %+v\n", cfg)
 
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -31,23 +41,23 @@ func main() {
 	}
 	defer cli.Close()
 
-	tasks := make(chan jobs.Job, len(conf.Queues))
-	waitWkEnd := make(chan struct{}, len(conf.Queues))
-	for i, wConf := range conf.Queues {
+	tasks := make(chan jobs.Job, len(cfg.Queues))
+	waitWkEnd := make(chan struct{}, len(cfg.Queues))
+	for i, wConf := range cfg.Queues {
 		a := worker{
 			id:   i,
 			cli:  cli,
 			reqs: tasks,
 			quit: waitWkEnd,
 			gpus: wConf.GPUs,
-			host: conf.Host,
+			host: cfg.Host,
 		}
 		go a.start()
 	}
 
 	// puller close
 	closing := make(chan struct{}, 1)
-	go puller(tasks, closing, conf.Host)
+	go puller(tasks, closing, cfg.Host)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
@@ -64,7 +74,7 @@ func main() {
 	}
 
 	// wait for workers to close
-	for range conf.Queues {
+	for range cfg.Queues {
 		<-waitWkEnd
 	}
 

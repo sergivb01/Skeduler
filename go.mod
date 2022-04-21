@@ -1,14 +1,17 @@
 module gitlab-bcds.udg.edu/sergivb01/skeduler
 
-go 1.17
+go 1.18
 
 require (
 	github.com/docker/docker v20.10.14+incompatible
 	github.com/georgysavva/scany v0.3.0
 	github.com/gofrs/uuid v4.2.0+incompatible
+	github.com/gorilla/handlers v1.5.1
+	github.com/gorilla/websocket v1.5.0
 	github.com/jackc/pgtype v1.10.0
 	github.com/jackc/pgx/v4 v4.15.0
 	github.com/nxadm/tail v1.4.8
+	golang.org/x/exp v0.0.0-20220414153411-bcd21879b8fd
 )
 
 require (
@@ -19,8 +22,6 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/gorilla/handlers v1.5.1 // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.11.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
@@ -33,7 +34,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
-	github.com/tj/go-buffer v1.2.0 // indirect
 	golang.org/x/crypto v0.0.0-20220331220935-ae2d96664a29 // indirect
 	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f // indirect
 	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect

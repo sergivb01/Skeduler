@@ -8,23 +8,36 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/docker/docker/client"
+	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/config"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/database"
 )
 
+type HttpConfig struct {
+	Listen       string        `yaml:"listen"`
+	WriteTimeout time.Duration `yaml:"write_timeout"`
+	ReadTimeout  time.Duration `yaml:"read_timeout"`
+	IdleTimeout  time.Duration `yaml:"idle_timeout"`
+}
+
+type conf struct {
+	Http HttpConfig `yaml:"http"`
+}
+
 var (
-	confFlag = flag.String("config", "config.yml", "Configuration file path")
+	flagConfig = flag.String("config", "config.yml", "Configuration file path")
 )
 
 func main() {
 	flag.Parse()
 
-	conf, err := configFromFile(*confFlag)
+	cfg, err := config.DecodeFromFile[conf](*flagConfig)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Loaded server configuration: %+v\n", conf)
+	fmt.Printf("Loaded server configuration: %+v\n", cfg)
 
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -44,7 +57,7 @@ func main() {
 	waitClose := make(chan struct{}, 1)
 
 	go func() {
-		if err := startHttp(closing, conf.Http, db, waitClose); err != nil {
+		if err := startHttp(closing, cfg.Http, db, waitClose); err != nil {
 			log.Printf("error server: %s\n", err)
 		}
 	}()
