@@ -117,12 +117,10 @@ func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string, logWri
 
 	cmd := strings.Split(j.Docker.Command, " ")
 	containerConfig := &container.Config{
-		Image: j.Docker.Image,
-		Cmd:   cmd,
-		// TODO(@sergivb01): canviar el hostname i el domini per alguna cosa més significativa
-		// Hostname: "hostname",
-		// Domainname: "",
-		Env: env,
+		Image:    j.Docker.Image,
+		Cmd:      cmd,
+		Hostname: fmt.Sprintf("exp_%.8s", j.ID.String()),
+		Env:      env,
 	}
 
 	hostConfig := &container.HostConfig{

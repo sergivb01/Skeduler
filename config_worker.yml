@@ -1,11 +1,5 @@
-http:
-  listen: ":8080"
-  write_timeout: "15s"
-  read_timeout: "15s"
-  idle_timeout: "15s"
-
 host: "http://localhost:8080"
+token: "awdada"
 queues:
   - gpus: [ "all" ]
-
   - gpus: [ "all" ]

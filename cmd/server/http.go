@@ -24,12 +24,15 @@ import (
 func startHttp(quit <-chan struct{}, conf HttpConfig, db database.Database, finished chan<- struct{}) error {
 	r := mux.NewRouter()
 
+	// TODO: afegir autenticació TOKEN_CLIENT
+	r.HandleFunc("/experiments", handleGetJobs(db)).Methods("GET")
 	r.HandleFunc("/experiments", handleNewJob(db)).Methods("POST")
 	r.HandleFunc("/experiments/{id}", handleGetById(db)).Methods("GET")
 	r.HandleFunc("/experiments/{id}", handleJobUpdate(db)).Methods("PUT")
 	r.HandleFunc("/logs/{id}", handleGetLogs()).Methods("GET")
 	r.HandleFunc("/logs/{id}/tail", handleFollowLogs()).Methods("GET")
 
+	// TODO: afegir autenticació TOKEN_WORKER
 	r.HandleFunc("/workers/poll", handleWorkerFetch(db)).Methods("GET")
 	r.HandleFunc("/logs/{id}/upload", handleWorkerLogs()).Methods("GET")
 
@@ -130,6 +133,12 @@ func handleWorkerLogs() http.HandlerFunc {
 			}
 			log.Printf("wrote %d bytes into %v log file", n, id)
 		}
+	}
+}
+
+func handleGetJobs(_ database.Database) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
 	}
 }
 
@@ -261,7 +270,6 @@ func handleFollowLogs() http.HandlerFunc {
 			select {
 			case line := <-t.Lines:
 				if err := line.Err; err != nil {
-					// TODO: extreure error
 					if err.Error() == "Too much log activity; waiting a second before resuming tailing" {
 						continue
 					}

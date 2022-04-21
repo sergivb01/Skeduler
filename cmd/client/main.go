@@ -16,6 +16,17 @@ type conf struct {
 	Token string `json:"token" yaml:"token"`
 }
 
+/**
+TODO:
+ * llistat d'experiments (poder filtrar per encuats/corrent/finalitzats/cancelats) (falta backend)
+ * consultar un experiment concret
+ * crear nou experiment
+ * actualitzar experiment
+ _
+ * consultar TOTS els logs d'experiment
+ * fer un tail dels logs (sortida per stderr) en temps real
+*/
+
 func main() {
 	flag.Parse()
 
