@@ -5,13 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"sync"
 	"time"
 
 	"github.com/docker/docker/client"
-	"github.com/gorilla/websocket"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
 
@@ -40,38 +38,6 @@ func (w *worker) start() {
 	w.quit <- struct{}{}
 }
 
-type dummyWriter struct {
-	wsConn *websocket.Conn
-	mu     *sync.Mutex
-	buff   *bytes.Buffer
-}
-
-var _ io.Writer = &dummyWriter{}
-
-func (d *dummyWriter) Write(b []byte) (int, error) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	return d.buff.Write(b)
-}
-
-func (d *dummyWriter) Flush() error {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	if d.buff.Len() == 0 {
-		return nil
-	}
-
-	b := d.buff.Bytes()
-	log.Printf("sending %d bytes to websocket!", len(b))
-	if err := d.wsConn.WriteMessage(websocket.BinaryMessage, b); err != nil {
-		return err
-	}
-	d.buff.Reset()
-
-	return nil
-}
-
 func (w *worker) run(j jobs.Job) error {
 	wsConn, err := streamUploadLogs(context.TODO(), w.host, j.ID)
 	if err != nil {
@@ -79,11 +45,12 @@ func (w *worker) run(j jobs.Job) error {
 	}
 	defer wsConn.Close()
 
-	logWriter := &dummyWriter{
+	logWriter := &websocketWriter{
 		wsConn: wsConn,
 		mu:     &sync.Mutex{},
 		buff:   &bytes.Buffer{},
 	}
+	defer logWriter.Close()
 
 	t := time.NewTicker(time.Millisecond * 250)
 	defer t.Stop()
@@ -97,9 +64,6 @@ func (w *worker) run(j jobs.Job) error {
 	defer func() {
 		_, _ = logWriter.Write([]byte(jobs.MagicEnd))
 		_, _ = logWriter.Write([]byte{'\n'})
-		if err := logWriter.Flush(); err != nil {
-			log.Printf("error flushing logs for %v: %s\n", j.ID, err)
-		}
 		log.Printf("finished defer at %s", time.Now())
 	}()
 
