@@ -11,6 +11,7 @@ Desacoblar backend i els workers
 
 - [ ] Backend:
     - [ ] Configuració
+    - [ ] Autenticació (tokens workers != tokens clients)
     - [ ] Endpoints:
         - [X] Crear nou job
         - [X] Obtenir job per id
