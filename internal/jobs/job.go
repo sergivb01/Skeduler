@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -45,6 +46,8 @@ type Job struct {
 }
 
 const MagicEnd = "_#$#$#$<END>#$#$#$_"
+
+var disableGpu = os.Getenv("SKEDULER_DISABLE_GPU") == ""
 
 func NewFromFile(filename string) (*Job, error) {
 	b, err := ioutil.ReadFile(filename)
@@ -122,18 +125,20 @@ func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string, logWri
 
 	hostConfig := &container.HostConfig{
 		AutoRemove: true,
-		Resources: container.Resources{
+		Resources:  container.Resources{
 			// CPUCount: 2,
 			// Memory:   1024 * 1024 * 256, // 256mb
-			DeviceRequests: []container.DeviceRequest{
-				{
-					Driver: "nvidia",
-					// Count:        -1,
-					DeviceIDs:    gpus, // especificar que es vol utilitzar la GPU 0, també podria ser "all"
-					Capabilities: [][]string{{"compute", "utility"}},
-				},
-			},
 		},
+	}
+
+	if !disableGpu {
+		hostConfig.Resources.DeviceRequests = []container.DeviceRequest{
+			{
+				Driver:       "nvidia",
+				DeviceIDs:    gpus, // especificar que es vol utilitzar la GPU 0, també podria ser "all"
+				Capabilities: [][]string{{"compute", "utility"}},
+			},
+		}
 	}
 
 	resp, err := cli.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, "")
