@@ -8,7 +8,6 @@ import (
 )
 
 type QueueConfig struct {
-	Name string   `yaml:"name"`
 	GPUs []string `yaml:"gpus"`
 }
 

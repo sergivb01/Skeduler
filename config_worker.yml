@@ -6,8 +6,6 @@ http:
 
 host: "http://localhost:8080"
 queues:
-  - name: "gpu u"
-    gpus: [ "all" ]
+  - gpus: [ "all" ]
 
-  - name: "gpu dos"
-    gpus: [ "all" ]
+  - gpus: [ "all" ]

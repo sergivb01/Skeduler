@@ -5,7 +5,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -51,6 +53,8 @@ func (w *worker) run(j jobs.Job) error {
 		buff:   &bytes.Buffer{},
 	}
 	defer logWriter.Close()
+	// logging to stderr as well as the custom log io.Writer
+	wr := io.MultiWriter(os.Stderr, logWriter)
 
 	t := time.NewTicker(time.Millisecond * 250)
 	defer t.Stop()
@@ -58,18 +62,16 @@ func (w *worker) run(j jobs.Job) error {
 		for range t.C {
 			_ = logWriter.Flush()
 		}
-		log.Printf("finished log writing at %s", time.Now())
 	}()
 
 	defer func() {
 		_, _ = logWriter.Write([]byte(jobs.MagicEnd))
 		_, _ = logWriter.Write([]byte{'\n'})
-		log.Printf("finished defer at %s", time.Now())
 	}()
 
 	log.Printf("[%d] worker running task %+v at %s\n", w.id, t, time.Now())
 
-	return j.Run(context.TODO(), w.cli, w.gpus, logWriter)
+	return j.Run(context.TODO(), w.cli, w.gpus, wr)
 }
 
 func puller(tasks chan<- jobs.Job, closing <-chan struct{}, host string) {

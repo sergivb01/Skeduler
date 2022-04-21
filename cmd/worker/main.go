@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -11,8 +12,14 @@ import (
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
 
+var (
+	confFlag = flag.String("config", "config.yml", "Configuration file path")
+)
+
 func main() {
-	conf, err := configFromFile("config.yml")
+	flag.Parse()
+
+	conf, err := configFromFile(*confFlag)
 	if err != nil {
 		panic(err)
 	}
