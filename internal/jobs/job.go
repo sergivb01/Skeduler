@@ -79,11 +79,10 @@ func authCredentials(username, password string) (string, error) {
 
 func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string, logWriter io.Writer) error {
 	logr := log.New(logWriter, fmt.Sprintf("[E-%.8s] ", j.ID.String()), log.LstdFlags|log.Lmsgprefix)
-	// TODO(@sergivb01): posar tots els experiments en una mateixa xarxa de docker
 	// TODO(@sergivb01): no fa pull d'imatges locals???
 	// la variable reader conté el progrés/log del pull de la imatge.
 	// reader, err := cli.ImagePull(ctx, j.Docker.Image, types.ImagePullOptions{
-	// 	// TODO(@sergivb01): pas de registre autenticació amb funció de authCredentials
+	// 	// pas de registre autenticació amb funció de authCredentials
 	// 	// RegistryAuth: "",
 	// })
 	// if err != nil {

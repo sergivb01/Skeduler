@@ -92,7 +92,6 @@ func puller(tasks chan<- jobs.Job, closing <-chan struct{}, host string) {
 				continue
 			}
 
-			// TODO: fix
 			job, err := fetchJobs(context.TODO(), host)
 			if err != nil {
 				// no job available

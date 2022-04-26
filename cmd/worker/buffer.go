@@ -38,6 +38,7 @@ func (w *websocketWriter) Close() error {
 }
 
 func (w *websocketWriter) reconnect() {
+	// TODO: exponential backoff
 	if conn, _ := streamUploadLogs(context.TODO(), w.host, w.id); conn != nil {
 		w.wsConn = conn
 	}
@@ -54,7 +55,6 @@ func (w *websocketWriter) Flush() error {
 	b := w.buff.Bytes()
 	if err := w.wsConn.WriteMessage(websocket.BinaryMessage, b); err != nil {
 		if errors.Is(err, syscall.EPIPE) {
-			// TODO: handle reconnect
 			w.reconnect()
 			return nil
 		}
