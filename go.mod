@@ -11,7 +11,6 @@ require (
 	github.com/jackc/pgtype v1.10.0
 	github.com/jackc/pgx/v4 v4.15.0
 	github.com/nxadm/tail v1.4.8
-	golang.org/x/exp v0.0.0-20220414153411-bcd21879b8fd
 )
 
 require (

@@ -60,7 +60,9 @@ func (w *worker) run(j jobs.Job) error {
 	defer t.Stop()
 	go func() {
 		for range t.C {
-			_ = logWriter.Flush()
+			if err := logWriter.Flush(); err != nil {
+				log.Printf("error flushing logs: %v", err)
+			}
 		}
 	}()
 

@@ -95,6 +95,9 @@ func (j *Job) Run(ctx context.Context, cli *client.Client, gpus []string, logWri
 	// }
 
 	logr.Printf("starting task at %s", time.Now())
+	if j.Docker.Environment == nil {
+		j.Docker.Environment = make(map[string]interface{})
+	}
 	// establir variables d'entorn que també volem guardar a la base de dades
 	j.Docker.Environment["SKEDULER_GPUS"] = fmt.Sprintf("%s", gpus)
 

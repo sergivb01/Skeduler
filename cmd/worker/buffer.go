@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"sync"
+	"syscall"
 
 	"github.com/gorilla/websocket"
 )
@@ -19,31 +21,35 @@ type websocketWriter struct {
 
 var _ io.WriteCloser = &websocketWriter{}
 
-func (d *websocketWriter) Write(b []byte) (int, error) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+func (w *websocketWriter) Write(b []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
-	return d.buff.Write(b)
+	return w.buff.Write(b)
 }
 
 // Close directly calls the Flush method
-func (d *websocketWriter) Close() error {
-	return d.Flush()
+func (w *websocketWriter) Close() error {
+	return w.Flush()
 }
 
-func (d *websocketWriter) Flush() error {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+func (w *websocketWriter) Flush() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
-	if d.buff.Len() == 0 {
+	if w.buff.Len() == 0 {
 		return nil
 	}
 
-	b := d.buff.Bytes()
-	if err := d.wsConn.WriteMessage(websocket.BinaryMessage, b); err != nil {
+	b := w.buff.Bytes()
+	if err := w.wsConn.WriteMessage(websocket.BinaryMessage, b); err != nil {
+		if errors.Is(err, syscall.EPIPE) {
+			// TODO: handle reconnect
+			return nil
+		}
 		return err
 	}
-	d.buff.Reset()
+	w.buff.Reset()
 
 	return nil
 }

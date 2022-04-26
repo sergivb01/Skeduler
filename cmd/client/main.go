@@ -30,6 +30,12 @@ TODO:
 func main() {
 	flag.Parse()
 
+	// dir, err := os.UserHomeDir()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// path := fmt.Sprintf("%s/.skeduler.json", dir)
+
 	cfg, err := config.DecodeFromFile[conf](*flagConfig)
 	if err != nil {
 		panic(err)
