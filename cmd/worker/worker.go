@@ -51,6 +51,8 @@ func (w *worker) run(j jobs.Job) error {
 		wsConn: wsConn,
 		mu:     &sync.Mutex{},
 		buff:   &bytes.Buffer{},
+		host:   w.host,
+		id:     j.ID,
 	}
 	defer logWriter.Close()
 	// logging to stderr as well as the custom log io.Writer

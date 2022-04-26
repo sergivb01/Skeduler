@@ -100,19 +100,20 @@ func handleWorkerLogs() http.HandlerFunc {
 			return
 		}
 
+		logFile, err := os.OpenFile(fmt.Sprintf("./logs/%v.log", id), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Printf("error creating log file: %v", err)
+			http.Error(w, "Error creating log file", http.StatusInternalServerError)
+			return
+		}
+		defer logFile.Close()
+
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			http.Error(w, "Error upgrading to websocket", http.StatusBadRequest)
 			return
 		}
 		defer conn.Close()
-
-		logFile, err := os.OpenFile(fmt.Sprintf("./logs/%v.log", id), os.O_APPEND|os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
-		if err != nil {
-			log.Printf("error creating log file: %v", err)
-			return
-		}
-		defer logFile.Close()
 
 		for {
 			messageType, r, err := conn.NextReader()
