@@ -8,11 +8,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"time"
 
-	"github.com/gofrs/uuid"
-	"github.com/gorilla/websocket"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
 
@@ -74,17 +71,4 @@ func updateJob(ctx context.Context, host string, job jobs.Job) error {
 	b, _ := ioutil.ReadAll(res.Body)
 
 	return fmt.Errorf("server error, recived status code %d and body: %v", res.StatusCode, string(b))
-}
-
-func streamUploadLogs(ctx context.Context, host string, id uuid.UUID) (*websocket.Conn, error) {
-	u, _ := url.Parse(host)
-	u.Path = fmt.Sprintf("/logs/%s/upload", id)
-	u.Scheme = "ws"
-
-	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("dialing websocket: %w", err)
-	}
-
-	return conn, nil
 }

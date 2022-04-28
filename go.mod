@@ -3,6 +3,7 @@ module gitlab-bcds.udg.edu/sergivb01/skeduler
 go 1.18
 
 require (
+	github.com/cenkalti/backoff/v4 v4.1.2
 	github.com/docker/docker v20.10.14+incompatible
 	github.com/georgysavva/scany v0.3.0
 	github.com/gofrs/uuid v4.2.0+incompatible

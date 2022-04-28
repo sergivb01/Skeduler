@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/url"
 	"os"
 	"sync"
 	"time"
@@ -41,24 +42,28 @@ func (w *worker) start() {
 }
 
 func (w *worker) run(j jobs.Job) error {
-	wsConn, err := streamUploadLogs(context.TODO(), w.host, j.ID)
+	u, err := url.Parse(w.host)
 	if err != nil {
-		return fmt.Errorf("getting socket for logs: %w", err)
+		return err
 	}
-	defer wsConn.Close()
+	u.Path = fmt.Sprintf("/logs/%s/upload", j.ID)
+	u.Scheme = "ws"
 
 	logWriter := &websocketWriter{
-		wsConn: wsConn,
-		mu:     &sync.Mutex{},
-		buff:   &bytes.Buffer{},
-		host:   w.host,
-		id:     j.ID,
+		mu:   &sync.Mutex{},
+		buff: &bytes.Buffer{},
+		uri:  u.String(),
+	}
+
+	if err := logWriter.connect(); err != nil {
+		return err
 	}
 	defer logWriter.Close()
+
 	// logging to stderr as well as the custom log io.Writer
 	wr := io.MultiWriter(os.Stderr, logWriter)
 
-	t := time.NewTicker(time.Millisecond * 250)
+	t := time.NewTicker(time.Millisecond * 500)
 	defer t.Stop()
 	go func() {
 		for range t.C {

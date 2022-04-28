@@ -127,12 +127,10 @@ func handleWorkerLogs() http.HandlerFunc {
 				continue
 			}
 
-			n, err := io.Copy(logFile, r)
-			if err != nil {
+			if _, err := io.Copy(logFile, r); err != nil {
 				log.Printf("error copying log contents to file: %v", err)
 				return
 			}
-			log.Printf("wrote %d bytes into %v log file", n, id)
 		}
 	}
 }
