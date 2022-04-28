@@ -3,15 +3,14 @@ module gitlab-bcds.udg.edu/sergivb01/skeduler
 go 1.18
 
 require (
-	github.com/cenkalti/backoff/v4 v4.1.2
 	github.com/docker/docker v20.10.14+incompatible
 	github.com/georgysavva/scany v0.3.0
 	github.com/gofrs/uuid v4.2.0+incompatible
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/websocket v1.5.0
+	github.com/hpcloud/tail v1.0.0
 	github.com/jackc/pgtype v1.10.0
 	github.com/jackc/pgx/v4 v4.15.0
-	github.com/nxadm/tail v1.4.8
 )
 
 require (
@@ -19,7 +18,6 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/felixge/httpsnoop v1.0.1 // indirect
-	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
@@ -41,6 +39,7 @@ require (
 	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
+	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 )
 

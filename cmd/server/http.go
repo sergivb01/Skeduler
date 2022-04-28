@@ -9,14 +9,12 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
-	"github.com/nxadm/tail"
-	"github.com/nxadm/tail/ratelimiter"
+	"github.com/hpcloud/tail"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/database"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
@@ -116,7 +114,7 @@ func handleWorkerLogs() http.HandlerFunc {
 		defer conn.Close()
 
 		for {
-			messageType, r, err := conn.NextReader()
+			messageType, read, err := conn.NextReader()
 			if err != nil {
 				log.Printf("error reading ws message: %v", err)
 				break
@@ -127,7 +125,7 @@ func handleWorkerLogs() http.HandlerFunc {
 				continue
 			}
 
-			if _, err := io.Copy(logFile, r); err != nil {
+			if _, err := io.Copy(logFile, read); err != nil {
 				log.Printf("error copying log contents to file: %v", err)
 				return
 			}
@@ -253,8 +251,6 @@ func handleFollowLogs() http.HandlerFunc {
 			MustExist:   false, // podem fer el tail abans que existeixi l'execució
 			Follow:      true,
 			MaxLineSize: 0,
-			// TODO: configurar ratelimit
-			RateLimiter: ratelimiter.NewLeakyBucket(64, time.Second),
 			Logger:      nil,
 		})
 		if err != nil {
@@ -262,16 +258,18 @@ func handleFollowLogs() http.HandlerFunc {
 			return
 		}
 		defer t.Cleanup()
+		defer t.Stop()
 
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 
-		for {
+		stop := false
+		for !stop {
 			select {
+			case <-r.Context().Done():
+				return
+
 			case line := <-t.Lines:
 				if err := line.Err; err != nil {
-					if err.Error() == "Too much log activity; waiting a second before resuming tailing" {
-						continue
-					}
 					log.Printf("err = %+v\n", err)
 					http.Error(w, "error tailing: "+err.Error(), http.StatusInternalServerError)
 					return
@@ -280,11 +278,14 @@ func handleFollowLogs() http.HandlerFunc {
 				text := line.Text
 				if strings.Contains(text, jobs.MagicEnd) {
 					text = strings.TrimSuffix(text, jobs.MagicEnd)
-					_, _ = w.Write([]byte(fmt.Sprintf("%s\n", text)))
-					flusher.Flush()
+					stop = true
+				}
+
+				if _, err := w.Write([]byte(fmt.Sprintf("%s\n", text))); err != nil {
+					log.Printf("error sending message: %v", err)
 					return
 				}
-				_, _ = w.Write([]byte(fmt.Sprintf("%s\n", text)))
+
 				flusher.Flush()
 				break
 			}

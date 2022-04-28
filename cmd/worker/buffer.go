@@ -57,7 +57,7 @@ func (w *websocketWriter) Flush() error {
 
 	b := w.buff.Bytes()
 	if err := w.wsConn.WriteMessage(websocket.BinaryMessage, b); err != nil {
-		if errors.Is(err, syscall.EPIPE) {
+		if errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) {
 			if err := w.connect(); err != nil {
 				return errConnectionLost
 			}
