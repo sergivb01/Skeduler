@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -31,6 +32,7 @@ func fetchJobs(ctx context.Context, host string) (jobs.Job, error) {
 		return jobs.Job{}, fmt.Errorf("performing get request: %w", err)
 	}
 	defer res.Body.Close()
+	_, _ = io.Copy(ioutil.Discard, res.Body)
 
 	switch res.StatusCode {
 	case http.StatusNoContent:
@@ -63,6 +65,8 @@ func updateJob(ctx context.Context, host string, job jobs.Job) error {
 	if err != nil {
 		return fmt.Errorf("performing psot request: %w", err)
 	}
+	defer res.Body.Close()
+	_, _ = io.Copy(ioutil.Discard, res.Body)
 
 	if res.StatusCode == http.StatusOK {
 		return nil
