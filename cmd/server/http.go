@@ -249,6 +249,7 @@ func handleFollowLogs() http.HandlerFunc {
 		t, err := tail.TailFile(fmt.Sprintf("./logs/%v.log", id), tail.Config{
 			ReOpen:      false,
 			MustExist:   false, // podem fer el tail abans que existeixi l'execució
+			Poll:        true,
 			Follow:      true,
 			MaxLineSize: 0,
 			Logger:      nil,
