@@ -232,18 +232,40 @@ func handleGetLogs() http.HandlerFunc {
 }
 
 func handleFollowLogs() http.HandlerFunc {
+	upgrader := websocket.Upgrader{}
 	return func(w http.ResponseWriter, r *http.Request) {
-		flusher, ok := w.(http.Flusher)
-		if !ok {
-			panic("expected http.ResponseWriter to be an http.Flusher")
-		}
-		defer flusher.Flush()
-
 		vars := mux.Vars(r)
 		id, err := uuid.FromString(vars["id"])
 		if err != nil {
 			http.Error(w, "invalid uuid", http.StatusBadRequest)
 			return
+		}
+
+		var sendFunc func([]byte) error
+		if r.URL.Query().Has("ws") {
+			conn, err := upgrader.Upgrade(w, r, nil)
+			if err != nil {
+				http.Error(w, "error upgrading websocket: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+			defer conn.Close()
+			sendFunc = func(b []byte) error {
+				return conn.WriteMessage(websocket.TextMessage, b)
+			}
+		} else {
+			flusher, ok := w.(http.Flusher)
+			if !ok {
+				panic("expected http.ResponseWriter to be an http.Flusher")
+			}
+			sendFunc = func(b []byte) error {
+				b = append(b, '\n')
+				_, err := w.Write(b)
+				if err == nil {
+					flusher.Flush()
+				}
+				return err
+			}
+			defer flusher.Flush()
 		}
 
 		t, err := tail.TailFile(fmt.Sprintf("./logs/%v.log", id), tail.Config{
@@ -282,12 +304,10 @@ func handleFollowLogs() http.HandlerFunc {
 					stop = true
 				}
 
-				if _, err := w.Write([]byte(fmt.Sprintf("%s\n", text))); err != nil {
+				if err := sendFunc([]byte(text)); err != nil {
 					log.Printf("error sending message: %v", err)
 					return
 				}
-
-				flusher.Flush()
 				break
 			}
 		}

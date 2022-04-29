@@ -32,10 +32,10 @@ func fetchJobs(ctx context.Context, host string) (jobs.Job, error) {
 		return jobs.Job{}, fmt.Errorf("performing get request: %w", err)
 	}
 	defer res.Body.Close()
-	_, _ = io.Copy(ioutil.Discard, res.Body)
 
 	switch res.StatusCode {
 	case http.StatusNoContent:
+		_, _ = io.Copy(ioutil.Discard, res.Body)
 		return jobs.Job{}, errNoJob
 
 	case http.StatusOK:
@@ -46,8 +46,7 @@ func fetchJobs(ctx context.Context, host string) (jobs.Job, error) {
 	default:
 	}
 
-	b, _ := ioutil.ReadAll(res.Body)
-	return jobs.Job{}, fmt.Errorf("server error, recived status code %d and body: %v", res.StatusCode, string(b))
+	return jobs.Job{}, fmt.Errorf("server error, recived status code %d and body", res.StatusCode)
 }
 
 func updateJob(ctx context.Context, host string, job jobs.Job) error {
