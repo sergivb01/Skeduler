@@ -135,7 +135,7 @@ func handleWorkerLogs() http.HandlerFunc {
 
 func handleGetJobs(_ database.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 	}
 }
 
@@ -241,6 +241,7 @@ func handleFollowLogs() http.HandlerFunc {
 			return
 		}
 
+		// funcion to send to either websockets or http flushing
 		var sendFunc func([]byte) error
 		if r.URL.Query().Has("ws") {
 			conn, err := upgrader.Upgrade(w, r, nil)
@@ -255,8 +256,13 @@ func handleFollowLogs() http.HandlerFunc {
 		} else {
 			flusher, ok := w.(http.Flusher)
 			if !ok {
-				panic("expected http.ResponseWriter to be an http.Flusher")
+				http.Error(w, "expected connection to be a flusher", http.StatusBadRequest)
+				return
 			}
+			defer flusher.Flush()
+
+			w.Header().Set("X-Content-Type-Options", "nosniff")
+
 			sendFunc = func(b []byte) error {
 				b = append(b, '\n')
 				_, err := w.Write(b)
@@ -265,7 +271,6 @@ func handleFollowLogs() http.HandlerFunc {
 				}
 				return err
 			}
-			defer flusher.Flush()
 		}
 
 		t, err := tail.TailFile(fmt.Sprintf("./logs/%v.log", id), tail.Config{
@@ -282,8 +287,6 @@ func handleFollowLogs() http.HandlerFunc {
 		}
 		defer t.Cleanup()
 		defer t.Stop()
-
-		w.Header().Set("X-Content-Type-Options", "nosniff")
 
 		stop := false
 		for !stop {
