@@ -1,6 +1,5 @@
 database: "postgres://skeduler:skeduler1234@localhost:5432/skeduler"
 http:
   listen: ":8080"
-  write_timeout: "15s"
   read_timeout: "15s"
   idle_timeout: "15s"

@@ -135,6 +135,7 @@ func handleWorkerLogs() http.HandlerFunc {
 
 func handleGetJobs(_ database.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// TODO: implement
 		_, _ = w.Write([]byte("ok"))
 	}
 }
@@ -241,7 +242,7 @@ func handleFollowLogs() http.HandlerFunc {
 			return
 		}
 
-		// funcion to send to either websockets or http flushing
+		// function to send to either websockets or http flushing
 		var sendFunc func([]byte) error
 		if r.URL.Query().Has("ws") {
 			conn, err := upgrader.Upgrade(w, r, nil)

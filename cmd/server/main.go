@@ -10,7 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/docker/docker/client"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/config"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/database"
 )
@@ -39,12 +38,6 @@ func main() {
 		panic(err)
 	}
 	fmt.Printf("Loaded server configuration: %+v\n", cfg)
-
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		panic(err)
-	}
-	defer cli.Close()
 
 	db, err := database.NewPostgres(context.Background(), cfg.Database)
 	// db, err := database.NewSqlite("database.db")
