@@ -44,7 +44,8 @@ func (w *websocketWriter) Write(b []byte) (int, error) {
 
 // Close directly calls the Flush method
 func (w *websocketWriter) Close() error {
-	return w.Flush()
+	_ = w.Flush()
+	return w.wsConn.Close()
 }
 
 func (w *websocketWriter) Flush() error {
