@@ -18,20 +18,25 @@ import (
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
 
+var tokens []string
+
 func startHttp(quit <-chan struct{}, conf httpConfig, db database.Database, finished chan<- struct{}) error {
 	r := mux.NewRouter()
 
+	tokens = make([]string, len(conf.Tokens))
+	copy(tokens, conf.Tokens)
+
 	// TODO: afegir autenticació TOKEN_CLIENT
-	r.HandleFunc("/experiments", handleGetJobs(db)).Methods("GET")
-	r.HandleFunc("/experiments", handleNewJob(db)).Methods("POST")
-	r.HandleFunc("/experiments/{id}", handleGetById(db)).Methods("GET")
-	r.HandleFunc("/experiments/{id}", handleJobUpdate(db)).Methods("PUT")
-	r.HandleFunc("/logs/{id}", handleGetLogs()).Methods("GET")
-	r.HandleFunc("/logs/{id}/tail", handleFollowLogs()).Methods("GET")
+	r.HandleFunc("/experiments", authMiddleware(handleGetJobs(db))).Methods("GET")
+	r.HandleFunc("/experiments", authMiddleware(handleNewJob(db))).Methods("POST")
+	r.HandleFunc("/experiments/{id}", authMiddleware(handleGetById(db))).Methods("GET")
+	r.HandleFunc("/experiments/{id}", authMiddleware(handleJobUpdate(db))).Methods("PUT")
+	r.HandleFunc("/logs/{id}", authMiddleware(handleGetLogs())).Methods("GET")
+	r.HandleFunc("/logs/{id}/tail", authMiddleware(handleFollowLogs())).Methods("GET")
 
 	// TODO: afegir autenticació TOKEN_WORKER
-	r.HandleFunc("/workers/poll", handleWorkerFetch(db)).Methods("GET")
-	r.HandleFunc("/logs/{id}/upload", handleWorkerLogs()).Methods("GET")
+	r.HandleFunc("/workers/poll", authMiddleware(handleWorkerFetch(db))).Methods("GET")
+	r.HandleFunc("/logs/{id}/upload", authMiddleware(handleWorkerLogs())).Methods("GET")
 
 	h := handlers.RecoveryHandler(handlers.PrintRecoveryStack(true))(
 		handlers.CombinedLoggingHandler(os.Stderr,
@@ -312,5 +317,28 @@ func handleFollowLogs() http.HandlerFunc {
 				break
 			}
 		}
+	}
+}
+
+func isValid(t string) bool {
+	log.Println(tokens)
+	for _, x := range tokens {
+		if t == x {
+			log.Println(t)
+			return true
+		}
+	}
+	return false
+}
+
+func authMiddleware(next http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ok := isValid(r.Header.Get("Authorization"))
+		if ok {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		w.WriteHeader(401)
 	}
 }

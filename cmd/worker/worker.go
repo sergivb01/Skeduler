@@ -21,12 +21,13 @@ import (
 )
 
 type worker struct {
-	id   int
-	cli  *client.Client
-	reqs <-chan jobs.Job
-	quit chan<- struct{}
-	gpus []string
-	host string
+	id    int
+	cli   *client.Client
+	reqs  <-chan jobs.Job
+	quit  chan<- struct{}
+	gpus  []string
+	token string
+	host  string
 }
 
 func (w *worker) start() {
@@ -38,14 +39,14 @@ func (w *worker) start() {
 			t.Status = jobs.Finished
 		}
 
-		if err := updateJob(context.TODO(), w.host, t); err != nil {
+		if err := updateJob(context.TODO(), w.host, t, w.token); err != nil {
 			log.Printf("failed to update job %+v status: %v\n", t.ID, err)
 		}
 	}
 	w.quit <- struct{}{}
 }
 
-func puller(tasks chan<- jobs.Job, closing <-chan struct{}, host string) {
+func puller(tasks chan<- jobs.Job, closing <-chan struct{}, host string, token string) {
 	t := time.NewTicker(time.Second * 3)
 	defer t.Stop()
 
@@ -59,7 +60,7 @@ func puller(tasks chan<- jobs.Job, closing <-chan struct{}, host string) {
 				continue
 			}
 
-			job, err := fetchJobs(context.TODO(), host)
+			job, err := fetchJobs(context.TODO(), host, token)
 			if err != nil {
 				// no job available
 				if errors.Is(err, errNoJob) {

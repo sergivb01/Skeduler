@@ -42,4 +42,5 @@ func main() {
 	}
 
 	log.Printf("%v", cfg)
+
 }

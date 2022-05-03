@@ -23,6 +23,7 @@ type QueueConfig struct {
 
 type conf struct {
 	Host   string        `yaml:"host"`
+	Token  string        `yaml:"token"`
 	Queues []QueueConfig `yaml:"queues"`
 }
 
@@ -45,19 +46,20 @@ func main() {
 	waitWkEnd := make(chan struct{}, len(cfg.Queues))
 	for i, wConf := range cfg.Queues {
 		a := worker{
-			id:   i,
-			cli:  cli,
-			reqs: tasks,
-			quit: waitWkEnd,
-			gpus: wConf.GPUs,
-			host: cfg.Host,
+			id:    i,
+			cli:   cli,
+			reqs:  tasks,
+			quit:  waitWkEnd,
+			gpus:  wConf.GPUs,
+			token: cfg.Token,
+			host:  cfg.Host,
 		}
 		go a.start()
 	}
 
 	// puller close
 	closing := make(chan struct{}, 1)
-	go puller(tasks, closing, cfg.Host)
+	go puller(tasks, closing, cfg.Host, cfg.Token)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)

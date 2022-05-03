@@ -1,4 +1,4 @@
 host: "http://localhost:8080"
-token: "awdada"
+token: "47"
 queues:
   - gpus: [ "all" ]
