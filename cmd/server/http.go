@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/handlers"
@@ -289,8 +288,7 @@ func handleFollowLogs() http.HandlerFunc {
 		defer t.Cleanup()
 		defer t.Stop()
 
-		stop := false
-		for !stop {
+		for {
 			select {
 			case <-r.Context().Done():
 				return
@@ -303,9 +301,8 @@ func handleFollowLogs() http.HandlerFunc {
 				}
 
 				text := line.Text
-				if strings.Contains(text, jobs.MagicEnd) {
-					text = strings.TrimSuffix(text, jobs.MagicEnd)
-					stop = true
+				if text == jobs.MagicEnd {
+					return
 				}
 
 				if err := sendFunc([]byte(text)); err != nil {

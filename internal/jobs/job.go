@@ -26,7 +26,6 @@ const (
 	Cancelled JobStatus = "CANCELLED"
 )
 
-// TODO: comprovar qui fa import d'aixo
 type Job struct {
 	ID          uuid.UUID   `json:"id" db:"id"`
 	Name        string      `json:"name" db:"name"`
