@@ -84,26 +84,26 @@ func (w *worker) run(j jobs.Job) error {
 	u.Path = fmt.Sprintf("/logs/%s/upload", j.ID)
 	u.Scheme = "ws"
 
-	logWriter := &websocketWriter{
+	lr := &websocketWriter{
 		mu:   &sync.Mutex{},
 		buff: &bytes.Buffer{},
 		uri:  u.String(),
 	}
 
-	if err := logWriter.connect(); err != nil {
+	if err := lr.connect(); err != nil {
 		return err
 	}
-	defer logWriter.Close()
+	defer lr.Close()
 
 	// logging to stderr as well as the custom log io.Writer
-	wr := io.MultiWriter(os.Stderr, logWriter)
-	logr := log.New(wr, fmt.Sprintf("[E-%.8s] ", j.ID.String()), log.LstdFlags|log.Lmsgprefix)
+	logWriter := io.MultiWriter(os.Stderr, lr)
+	logr := log.New(logWriter, fmt.Sprintf("[E-%.8s] ", j.ID.String()), log.LstdFlags|log.Lmsgprefix)
 
 	t := time.NewTicker(time.Millisecond * 500)
 	defer t.Stop()
 	go func() {
 		for range t.C {
-			if err := logWriter.Flush(); err != nil {
+			if err := lr.Flush(); err != nil {
 				log.Printf("error flushing logs: %v", err)
 			}
 		}
@@ -183,6 +183,7 @@ func (w *worker) run(j jobs.Job) error {
 
 	resp, err := w.cli.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, "")
 	if err != nil {
+		logr.Printf("error creating container: %v", err)
 		return fmt.Errorf("creating container: %w", err)
 	}
 	for _, warning := range resp.Warnings {
@@ -191,6 +192,7 @@ func (w *worker) run(j jobs.Job) error {
 	containerID := resp.ID
 
 	if err := w.cli.ContainerStart(ctx, containerID, types.ContainerStartOptions{}); err != nil {
+		logr.Printf("error starting container: %v", err)
 		return fmt.Errorf("starting container: %w", err)
 	}
 
@@ -203,6 +205,8 @@ func (w *worker) run(j jobs.Job) error {
 		Details:    true,
 	})
 	if err != nil {
+		_ = w.cli.ContainerStop(ctx, containerID, nil)
+		logr.Printf("error getting container logs, stopping container: %v", err)
 		return fmt.Errorf("getting logs: %w", err)
 	}
 	defer containerLogs.Close()
