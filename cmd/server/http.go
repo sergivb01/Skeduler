@@ -18,29 +18,22 @@ import (
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
 
-var tokens []string
-
 func startHttp(quit <-chan struct{}, conf httpConfig, db database.Database, finished chan<- struct{}) error {
 	r := mux.NewRouter()
 
-	tokens = make([]string, len(conf.Tokens))
-	copy(tokens, conf.Tokens)
+	r.HandleFunc("/experiments", handleGetJobs(db)).Methods("GET")
+	r.HandleFunc("/experiments", handleNewJob(db)).Methods("POST")
+	r.HandleFunc("/experiments/{id}", handleGetById(db)).Methods("GET")
+	r.HandleFunc("/experiments/{id}", handleJobUpdate(db)).Methods("PUT")
+	r.HandleFunc("/logs/{id}", handleGetLogs()).Methods("GET")
+	r.HandleFunc("/logs/{id}/tail", handleFollowLogs()).Methods("GET")
 
-	// TODO: afegir autenticació TOKEN_CLIENT
-	r.HandleFunc("/experiments", authMiddleware(handleGetJobs(db))).Methods("GET")
-	r.HandleFunc("/experiments", authMiddleware(handleNewJob(db))).Methods("POST")
-	r.HandleFunc("/experiments/{id}", authMiddleware(handleGetById(db))).Methods("GET")
-	r.HandleFunc("/experiments/{id}", authMiddleware(handleJobUpdate(db))).Methods("PUT")
-	r.HandleFunc("/logs/{id}", authMiddleware(handleGetLogs())).Methods("GET")
-	r.HandleFunc("/logs/{id}/tail", authMiddleware(handleFollowLogs())).Methods("GET")
-
-	// TODO: afegir autenticació TOKEN_WORKER
-	r.HandleFunc("/workers/poll", authMiddleware(handleWorkerFetch(db))).Methods("GET")
-	r.HandleFunc("/logs/{id}/upload", authMiddleware(handleWorkerLogs())).Methods("GET")
+	r.HandleFunc("/workers/poll", authMiddleware(handleWorkerFetch(db), conf.Tokens)).Methods("GET")
+	r.HandleFunc("/logs/{id}/upload", authMiddleware(handleWorkerLogs(), conf.Tokens)).Methods("GET")
 
 	h := handlers.RecoveryHandler(handlers.PrintRecoveryStack(true))(
 		handlers.CombinedLoggingHandler(os.Stderr,
-			handlers.CompressHandler(r)))
+			handlers.CompressHandler(authMiddleware(r, conf.Tokens))))
 
 	srv := &http.Server{
 		Addr: conf.Listen,
@@ -320,25 +313,23 @@ func handleFollowLogs() http.HandlerFunc {
 	}
 }
 
-func isValid(t string) bool {
-	log.Println(tokens)
-	for _, x := range tokens {
-		if t == x {
-			log.Println(t)
+func isValid(token string, allowedTokens []string) bool {
+	for _, x := range allowedTokens {
+		if token == x {
 			return true
 		}
 	}
 	return false
 }
 
-func authMiddleware(next http.Handler) http.HandlerFunc {
+func authMiddleware(next http.Handler, tokens []string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ok := isValid(r.Header.Get("Authorization"))
+		ok := isValid(r.Header.Get("Authorization"), tokens)
 		if ok {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		w.WriteHeader(401)
+		w.WriteHeader(http.StatusUnauthorized)
 	}
 }

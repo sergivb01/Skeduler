@@ -58,6 +58,7 @@ func updateJob(ctx context.Context, host string, job jobs.Job, token string) err
 
 	req, err := http.NewRequestWithContext(ctx, "PUT", fmt.Sprintf("%s/experiments/%s", host, job.ID), buff)
 	req.Header.Set("User-Agent", "Skeduler-Puller/1.0")
+	req.Header.Set("Authorization", token)
 	if err != nil {
 		return fmt.Errorf("creating post request: %w", err)
 	}
