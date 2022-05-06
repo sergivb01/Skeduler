@@ -1,13 +1,11 @@
 package jobs
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/gofrs/uuid"
 )
 
@@ -51,18 +49,4 @@ func NewFromFile(filename string) (*Job, error) {
 	}
 
 	return &r, nil
-}
-
-func AuthCredentials(username, password string) (string, error) {
-	authConfig := types.AuthConfig{
-		Username: username,
-		Password: password,
-	}
-
-	encodedJSON, err := json.Marshal(authConfig)
-	if err != nil {
-		return "", fmt.Errorf("marshaling authconfig to json: %w", err)
-	}
-
-	return base64.URLEncoding.EncodeToString(encodedJSON), nil
 }

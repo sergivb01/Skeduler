@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -235,4 +237,18 @@ func (w *worker) run(j jobs.Job) error {
 	<-doneLogs
 
 	return nil
+}
+
+func authCredentials(username, password string) (string, error) {
+	authConfig := types.AuthConfig{
+		Username: username,
+		Password: password,
+	}
+
+	encodedJSON, err := json.Marshal(authConfig)
+	if err != nil {
+		return "", fmt.Errorf("marshaling authconfig to json: %w", err)
+	}
+
+	return base64.URLEncoding.EncodeToString(encodedJSON), nil
 }
