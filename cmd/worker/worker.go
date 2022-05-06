@@ -85,27 +85,27 @@ func (w *worker) run(j jobs.Job) error {
 	u.Path = fmt.Sprintf("/logs/%s/upload", j.ID)
 	u.Scheme = "ws"
 
-	logWriter := &websocketWriter{
+	lr := &websocketWriter{
 		mu:    &sync.Mutex{},
 		buff:  &bytes.Buffer{},
 		uri:   u.String(),
 		token: w.token,
 	}
 
-	if err := logWriter.connect(); err != nil {
+	if err := lr.connect(); err != nil {
 		return fmt.Errorf("error connecting ws: %w", err)
 	}
-	defer logWriter.Close()
+	defer lr.Close()
 
 	// logging to stderr as well as the custom log io.Writer
-	wr := io.MultiWriter(os.Stderr, logWriter)
-	logr := log.New(wr, fmt.Sprintf("[E-%.8s] ", j.ID.String()), log.LstdFlags|log.Lmsgprefix)
+	logWriter := io.MultiWriter(os.Stderr, lr)
+	logr := log.New(logWriter, fmt.Sprintf("[E-%.8s] ", j.ID.String()), log.LstdFlags|log.Lmsgprefix)
 
 	t := time.NewTicker(time.Millisecond * 500)
 	defer t.Stop()
 	go func() {
 		for range t.C {
-			if err := logWriter.Flush(); err != nil {
+			if err := lr.Flush(); err != nil {
 				log.Printf("error flushing logs: %v", err)
 			}
 		}
