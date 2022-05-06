@@ -19,6 +19,7 @@ type httpConfig struct {
 	WriteTimeout time.Duration `yaml:"write_timeout" json:"writeTimeout"`
 	ReadTimeout  time.Duration `yaml:"read_timeout" json:"readTimeout"`
 	IdleTimeout  time.Duration `yaml:"idle_timeout" json:"idleTimeout"`
+	Tokens       []string      `yaml:"tokens" json:"tokens"`
 }
 
 type conf struct {

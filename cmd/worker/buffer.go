@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"sync"
 	"syscall"
 
@@ -15,7 +16,8 @@ import (
 // the Flush() method periodically so that the underlying buffer contents are sent
 // to the websocket connection. Messages are sent as websocket.BinaryMessage
 type websocketWriter struct {
-	uri string
+	uri   string
+	token string
 
 	mu     *sync.Mutex
 	wsConn *websocket.Conn
@@ -27,7 +29,10 @@ var errConnectionLost = errors.New("connection to websocket server is down")
 var _ io.WriteCloser = &websocketWriter{}
 
 func (w *websocketWriter) connect() error {
-	conn, _, err := websocket.DefaultDialer.Dial(w.uri, nil)
+	h := http.Header{}
+	h.Set("Authorization", w.token)
+
+	conn, _, err := websocket.DefaultDialer.Dial(w.uri, h)
 	if err != nil {
 		return fmt.Errorf("dialing websocket: %w", err)
 	}

@@ -1,5 +1,6 @@
-database: "postgres://skeduler:skeduler1234@localhost:5432/skeduler"
+database: "postgres://xavier@localhost:5432/postgres"
 http:
   listen: ":8080"
   read_timeout: "15s"
   idle_timeout: "15s"
+  tokens: ["42", "47", "139"]

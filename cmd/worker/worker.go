@@ -23,12 +23,13 @@ import (
 )
 
 type worker struct {
-	id   int
-	cli  *client.Client
-	reqs <-chan jobs.Job
-	quit chan<- struct{}
-	gpus []string
-	host string
+	id    int
+	cli   *client.Client
+	reqs  <-chan jobs.Job
+	quit  chan<- struct{}
+	gpus  []string
+	token string
+	host  string
 }
 
 func (w *worker) start() {
@@ -40,14 +41,14 @@ func (w *worker) start() {
 			t.Status = jobs.Finished
 		}
 
-		if err := updateJob(context.TODO(), w.host, t); err != nil {
+		if err := updateJob(context.TODO(), w.host, t, w.token); err != nil {
 			log.Printf("failed to update job %+v status: %v\n", t.ID, err)
 		}
 	}
 	w.quit <- struct{}{}
 }
 
-func puller(tasks chan<- jobs.Job, closing <-chan struct{}, host string) {
+func puller(tasks chan<- jobs.Job, closing <-chan struct{}, host string, token string) {
 	t := time.NewTicker(time.Second * 3)
 	defer t.Stop()
 
@@ -61,7 +62,7 @@ func puller(tasks chan<- jobs.Job, closing <-chan struct{}, host string) {
 				continue
 			}
 
-			job, err := fetchJobs(context.TODO(), host)
+			job, err := fetchJobs(context.TODO(), host, token)
 			if err != nil {
 				// no job available
 				if errors.Is(err, errNoJob) {
@@ -87,13 +88,14 @@ func (w *worker) run(j jobs.Job) error {
 	u.Scheme = "ws"
 
 	lr := &websocketWriter{
-		mu:   &sync.Mutex{},
-		buff: &bytes.Buffer{},
-		uri:  u.String(),
+		mu:    &sync.Mutex{},
+		buff:  &bytes.Buffer{},
+		uri:   u.String(),
+		token: w.token,
 	}
 
 	if err := lr.connect(); err != nil {
-		return err
+		return fmt.Errorf("error connecting ws: %w", err)
 	}
 	defer lr.Close()
 
@@ -167,7 +169,7 @@ func (w *worker) run(j jobs.Job) error {
 
 	hostConfig := &container.HostConfig{
 		AutoRemove: true,
-		Resources:  container.Resources{
+		Resources: container.Resources{
 			// CPUCount: 2,
 			// Memory:   1024 * 1024 * 256, // 256mb
 		},

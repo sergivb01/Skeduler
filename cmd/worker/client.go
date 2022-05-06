@@ -20,9 +20,10 @@ var httpClient = &http.Client{
 	Timeout: 10 * time.Second,
 }
 
-func fetchJobs(ctx context.Context, host string) (jobs.Job, error) {
+func fetchJobs(ctx context.Context, host string, token string) (jobs.Job, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/workers/poll", host), nil)
 	req.Header.Set("User-Agent", "Skeduler-Puller/1.0")
+	req.Header.Set("Authorization", token)
 	if err != nil {
 		return jobs.Job{}, fmt.Errorf("creating get request: %w", err)
 	}
@@ -49,7 +50,7 @@ func fetchJobs(ctx context.Context, host string) (jobs.Job, error) {
 	return jobs.Job{}, fmt.Errorf("server error, recived status code %d and body", res.StatusCode)
 }
 
-func updateJob(ctx context.Context, host string, job jobs.Job) error {
+func updateJob(ctx context.Context, host string, job jobs.Job, token string) error {
 	buff := &bytes.Buffer{}
 	if err := json.NewEncoder(buff).Encode(job); err != nil {
 		return err
@@ -57,6 +58,7 @@ func updateJob(ctx context.Context, host string, job jobs.Job) error {
 
 	req, err := http.NewRequestWithContext(ctx, "PUT", fmt.Sprintf("%s/experiments/%s", host, job.ID), buff)
 	req.Header.Set("User-Agent", "Skeduler-Puller/1.0")
+	req.Header.Set("Authorization", token)
 	if err != nil {
 		return fmt.Errorf("creating post request: %w", err)
 	}
