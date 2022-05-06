@@ -11,7 +11,7 @@ type Database interface {
 	// FetchJob gets a job and updates its status to "RUNNING"
 	FetchJob(context.Context) (*jobs.Job, error)
 
-	// TODO: GetAll with filters
+	GetAll(ctx context.Context) ([]jobs.Job, error)
 	GetById(context.Context, uuid.UUID) (*jobs.Job, error)
 
 	Insert(context.Context, InsertParams) (*jobs.Job, error)

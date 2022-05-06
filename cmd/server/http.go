@@ -134,10 +134,15 @@ func handleWorkerLogs() http.HandlerFunc {
 	}
 }
 
-func handleGetJobs(_ database.Database) http.HandlerFunc {
+func handleGetJobs(db database.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// TODO: implement
-		_, _ = w.Write([]byte("ok"))
+		job, err := db.GetAll(r.Context())
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error getting all jobs: %v\n", err), http.StatusInternalServerError)
+			return
+		}
+
+		_ = json.NewEncoder(w).Encode(job)
 	}
 }
 

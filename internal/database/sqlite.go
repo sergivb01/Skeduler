@@ -107,6 +107,10 @@ func (s sqliteDb) FetchJob(ctx context.Context) (*jobs.Job, error) {
 	return &job, nil
 }
 
+func (s sqliteDb) GetAll(ctx context.Context) ([]jobs.Job, error) {
+	panic("GetAll in sqlite not implemented")
+}
+
 func (s sqliteDb) runQuery(ctx context.Context, job *jobs.Job, query string, args ...interface{}) error {
 	row := s.db.QueryRowContext(ctx, query, args...)
 	if err := row.Err(); err != nil {

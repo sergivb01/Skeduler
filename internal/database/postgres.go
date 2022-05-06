@@ -77,6 +77,25 @@ func (p postgresDb) FetchJob(ctx context.Context) (*jobs.Job, error) {
 	return &job, nil
 }
 
+func (p postgresDb) GetAll(ctx context.Context) ([]jobs.Job, error) {
+	rows, err := p.db.Query(ctx, `SELECT id, name, description, docker_image AS "docker_embedded.docker_image", docker_command AS "docker_embedded.docker_command",
+		    docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status, metadata FROM jobs`)
+	if err != nil {
+		return nil, fmt.Errorf("running query: %w", err)
+	}
+	defer rows.Close()
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	var data []jobs.Job
+	if err := pgxscan.ScanAll(&data, rows); err != nil {
+		return nil, fmt.Errorf("scanning rows: %w", err)
+	}
+	return data, nil
+}
+
 func (p postgresDb) GetById(ctx context.Context, id uuid.UUID) (*jobs.Job, error) {
 	var job jobs.Job
 	err := p.runQuery(ctx, &job, `SELECT id, name, description, docker_image AS "docker_embedded.docker_image", docker_command AS "docker_embedded.docker_command",
