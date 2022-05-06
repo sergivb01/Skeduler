@@ -1,6 +1,8 @@
-create type job_status as enum ('ENQUEUED', 'RUNNING', 'FINISHED', 'CANCELLED');
+CREATE TYPE job_status AS ENUM ('ENQUEUED', 'RUNNING', 'FINISHED', 'CANCELLED');
 
-create table if not exists jobs
+CREATE INDEX jobs_status_index ON jobs (status);
+
+CREATE TABLE jobs
 (
     id                 uuid                     default gen_random_uuid()      not null
         primary key,
@@ -14,6 +16,5 @@ create table if not exists jobs
     status             job_status               default 'ENQUEUED'::job_status not null,
     metadata           json
 );
-
 
 
