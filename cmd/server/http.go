@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -115,6 +116,9 @@ func handleWorkerLogs() http.HandlerFunc {
 		for {
 			messageType, read, err := conn.NextReader()
 			if err != nil {
+				if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+					return
+				}
 				log.Printf("error reading ws message: %v", err)
 				break
 			}
