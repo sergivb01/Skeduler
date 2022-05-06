@@ -28,8 +28,8 @@ func startHttp(quit <-chan struct{}, conf httpConfig, db database.Database, fini
 	r.HandleFunc("/logs/{id}", handleGetLogs()).Methods("GET")
 	r.HandleFunc("/logs/{id}/tail", handleFollowLogs()).Methods("GET")
 
-	r.HandleFunc("/workers/poll", authMiddleware(handleWorkerFetch(db), conf.Tokens)).Methods("GET")
-	r.HandleFunc("/logs/{id}/upload", authMiddleware(handleWorkerLogs(), conf.Tokens)).Methods("GET")
+	r.HandleFunc("/workers/poll", handleWorkerFetch(db)).Methods("GET")
+	r.HandleFunc("/logs/{id}/upload", handleWorkerLogs()).Methods("GET")
 
 	h := handlers.RecoveryHandler(handlers.PrintRecoveryStack(true))(
 		handlers.CombinedLoggingHandler(os.Stderr,

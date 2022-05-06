@@ -86,13 +86,14 @@ func (w *worker) run(j jobs.Job) error {
 	u.Scheme = "ws"
 
 	logWriter := &websocketWriter{
-		mu:   &sync.Mutex{},
-		buff: &bytes.Buffer{},
-		uri:  u.String(),
+		mu:    &sync.Mutex{},
+		buff:  &bytes.Buffer{},
+		uri:   u.String(),
+		token: w.token,
 	}
 
 	if err := logWriter.connect(); err != nil {
-		return err
+		return fmt.Errorf("error connecting ws: %w", err)
 	}
 	defer logWriter.Close()
 
