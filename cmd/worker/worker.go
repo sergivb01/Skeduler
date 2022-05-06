@@ -185,6 +185,7 @@ func (w *worker) run(j jobs.Job) error {
 
 	resp, err := w.cli.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, "")
 	if err != nil {
+		logr.Printf("error creating container: %v", err)
 		return fmt.Errorf("creating container: %w", err)
 	}
 	for _, warning := range resp.Warnings {
@@ -193,6 +194,7 @@ func (w *worker) run(j jobs.Job) error {
 	containerID := resp.ID
 
 	if err := w.cli.ContainerStart(ctx, containerID, types.ContainerStartOptions{}); err != nil {
+		logr.Printf("error starting container: %v", err)
 		return fmt.Errorf("starting container: %w", err)
 	}
 
@@ -205,6 +207,8 @@ func (w *worker) run(j jobs.Job) error {
 		Details:    true,
 	})
 	if err != nil {
+		_ = w.cli.ContainerStop(ctx, containerID, nil)
+		logr.Printf("error getting container logs, stopping container: %v", err)
 		return fmt.Errorf("getting logs: %w", err)
 	}
 	defer containerLogs.Close()
