@@ -16,5 +16,3 @@ CREATE TABLE jobs
     status             job_status               default 'ENQUEUED'::job_status not null,
     metadata           json
 );
-
-
