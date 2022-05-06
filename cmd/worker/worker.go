@@ -167,7 +167,7 @@ func (w *worker) run(j jobs.Job) error {
 
 	hostConfig := &container.HostConfig{
 		AutoRemove: true,
-		Resources:  container.Resources{
+		Resources: container.Resources{
 			// CPUCount: 2,
 			// Memory:   1024 * 1024 * 256, // 256mb
 		},

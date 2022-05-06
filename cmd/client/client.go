@@ -22,6 +22,8 @@ var httpClient = &http.Client{
 }
 
 func getJobs(ctx context.Context, host string, token string) (jobs.Job, error) {
+	// TODO: Falta implementar al servidor
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/experiments", host), nil)
 	req.Header.Set("Authorization", token)
 
