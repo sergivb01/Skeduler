@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+
 	"github.com/gofrs/uuid"
 	"github.com/urfave/cli/v2"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/config"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/database"
-	"io/ioutil"
-	"log"
-	"os"
 )
 
 type conf struct {
@@ -20,31 +21,25 @@ type conf struct {
 }
 
 func main() {
+	dir, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+
+	cfg, err := config.DecodeFromFile[conf](fmt.Sprintf("%s/.skeduler.json", dir))
+	if err != nil {
+		panic(err)
+	}
 
 	app := &cli.App{
 		Name:  "skeduler",
 		Usage: "Encuador d'experiments amb Docker",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "config",
-				Aliases: []string{"f"},
-				Value:   "config_client.json",
-				Usage:   "Configuration file path",
-			},
-		},
 		Commands: []*cli.Command{
 			{
 				Name:    "all",
 				Aliases: []string{"a"},
 				Usage:   "Lists all experiments",
 				Action: func(c *cli.Context) error {
-					// load file
-					cfg, err := config.DecodeFromFile[conf](c.String("config"))
-					if err != nil {
-						panic(err)
-					}
-					fmt.Printf("%v\n", cfg)
-
 					listExperiments(cfg.Host, cfg.Token)
 
 					return nil
@@ -56,12 +51,6 @@ func main() {
 				Usage:     "Shows an experiments",
 				ArgsUsage: "<id>",
 				Action: func(c *cli.Context) error {
-					cfg, err := config.DecodeFromFile[conf](c.String("config"))
-					if err != nil {
-						panic(err)
-					}
-					fmt.Printf("%v\n", cfg)
-
 					if c.Args().Len() > 0 {
 						showExperiment(cfg.Host, cfg.Token, c.Args().Get(0))
 					} else {
@@ -72,17 +61,11 @@ func main() {
 				},
 			},
 			{
-				Name:      "enque",
+				Name:      "enqueue",
 				Aliases:   []string{"e"},
-				Usage:     "Enques an experiment",
+				Usage:     "Enqueues an experiment",
 				ArgsUsage: "<filename>",
 				Action: func(c *cli.Context) error {
-					cfg, err := config.DecodeFromFile[conf](c.String("config"))
-					if err != nil {
-						panic(err)
-					}
-					fmt.Printf("%v\n", cfg)
-
 					if c.Args().Len() > 0 {
 						enqueExperiment(cfg.Host, cfg.Token, c.Args().Get(0))
 					} else {
@@ -98,12 +81,6 @@ func main() {
 				Usage:     "Updates an experiment",
 				ArgsUsage: "<filename>",
 				Action: func(c *cli.Context) error {
-					cfg, err := config.DecodeFromFile[conf](c.String("config"))
-					if err != nil {
-						panic(err)
-					}
-					fmt.Printf("%v\n", cfg)
-
 					if c.Args().Len() > 0 {
 						updateExperiment(cfg.Host, cfg.Token, c.Args().Get(0))
 					} else {
@@ -119,12 +96,6 @@ func main() {
 				Usage:     "Shows an experiment's logs",
 				ArgsUsage: "<id>",
 				Action: func(c *cli.Context) error {
-					cfg, err := config.DecodeFromFile[conf](c.String("config"))
-					if err != nil {
-						panic(err)
-					}
-					fmt.Printf("%v\n", cfg)
-
 					if c.Args().Len() > 1 {
 						showLogs(cfg.Host, cfg.Token, c.Args().Get(1))
 					} else {
@@ -135,10 +106,19 @@ func main() {
 				},
 			},
 		},
+		Authors: []*cli.Author{
+			{
+				Name:  "Sergi Vos",
+				Email: "contacte@sergivos.dev",
+			},
+			{
+				Name:  "Xavier Terés",
+				Email: "algo@xavierteres.com",
+			},
+		},
 	}
 
-	err := app.Run(os.Args)
-	if err != nil {
+	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
 
@@ -167,17 +147,15 @@ func showExperiment(host string, token string, id string) {
 	}
 }
 
-func enqueExperiment(host string, token string, file string) {
-	jsonFile, err := os.Open(file)
+func enqueExperiment(host, token, fileName string) {
+	b, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("error llegint experiment: %v\n", err)
+		return
 	}
 
-	defer jsonFile.Close()
-
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-
-	ret, err := newJob(context.TODO(), host, token, string(byteValue))
+	// TODO: no convertir a string
+	ret, err := newJob(context.TODO(), host, token, string(b))
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {

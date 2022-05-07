@@ -6,13 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gofrs/uuid"
-	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/database"
-	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/gofrs/uuid"
+	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/database"
+	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
 
 var errNoJob = errors.New("no job available")
