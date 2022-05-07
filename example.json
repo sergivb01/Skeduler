@@ -1,6 +1,6 @@
 {
-  "name": "HelloWorld",
-  "description": "Hello world!",
+  "name": "aaaaaaaaaa",
+  "description": "test example desc",
   "docker": {
     "image": "nvidia/cuda:11.0-base",
     "command": "nvidia-smi",

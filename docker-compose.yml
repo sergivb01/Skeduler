@@ -5,13 +5,14 @@ services:
     image: sk-server
     volumes:
       - ./config_server.yml:/application/config.yml
+      - ./data/logs/:/application/logs
     deploy:
       restart_policy:
         condition: on-failure
     ports:
       - "8080:8080"
     networks:
-      - backend
+      - internal
     depends_on:
       - database
 
@@ -29,11 +30,11 @@ services:
           devices:
             - capabilities: [ gpu ]
     networks:
-      - backend
+      - internal
 
   database:
     container_name: skeduler-database
-    image: postgres:13.2
+    image: sk-database
     restart: unless-stopped
     environment:
       POSTGRES_DB: skeduler
@@ -43,7 +44,7 @@ services:
     volumes:
       - ./data:/var/lib/postgresql/data
     networks:
-      - backend
+      - internal
 
 networks:
-  backend:
+  internal:
