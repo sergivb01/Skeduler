@@ -258,7 +258,7 @@ func handleFollowLogs() http.HandlerFunc {
 			}
 			defer conn.Close()
 			sendFunc = func(b []byte) error {
-				return conn.WriteMessage(websocket.TextMessage, b)
+				return conn.WriteMessage(websocket.BinaryMessage, b)
 			}
 		} else {
 			flusher, ok := w.(http.Flusher)
