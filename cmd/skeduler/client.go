@@ -21,41 +21,38 @@ var httpClient = &http.Client{
 	Timeout: 10 * time.Second,
 }
 
-func getJobs(ctx context.Context, host string, token string) (jobs.Job, error) {
-	// TODO: Falta implementar al servidor
-
+func getJobs(ctx context.Context, host string, token string) ([]jobs.Job, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/experiments", host), nil)
 	req.Header.Set("Authorization", token)
 
 	if err != nil {
-		return jobs.Job{}, fmt.Errorf("creating get request: %w", err)
+		return []jobs.Job{}, fmt.Errorf("creating get request: %w", err)
 	}
 
 	res, err := httpClient.Do(req)
 	if err != nil {
-		return jobs.Job{}, fmt.Errorf("performing get request: %w", err)
+		return []jobs.Job{}, fmt.Errorf("performing get request: %w", err)
 	}
 	defer res.Body.Close()
 
 	switch res.StatusCode {
 	case http.StatusNoContent:
 		_, _ = io.Copy(ioutil.Discard, res.Body)
-		return jobs.Job{}, errNoJob
+		return []jobs.Job{}, errNoJob
 
 	case http.StatusOK:
-		var job jobs.Job
+		var job []jobs.Job
 		_ = json.NewDecoder(res.Body).Decode(&job)
 		return job, nil
 
 	default:
 	}
 
-	return jobs.Job{}, fmt.Errorf("server error, recived status code %d and body", res.StatusCode)
+	return []jobs.Job{}, fmt.Errorf("server error, recived status code %d and body", res.StatusCode)
 }
 
-func newJob(ctx context.Context, host string, token string, jobRequest database.InsertParams) (jobs.Job, error) {
-	buf := bytes.NewBufferString("")
-	_ = json.NewEncoder(buf).Encode(&jobRequest)
+func newJob(ctx context.Context, host string, token string, jobRequest string) (jobs.Job, error) {
+	buf := bytes.NewBufferString(jobRequest)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("%s/experiments", host), buf)
 	req.Header.Set("Authorization", token)
