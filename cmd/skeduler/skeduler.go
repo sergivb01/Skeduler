@@ -32,48 +32,108 @@ func main() {
 				Usage:   "Configuration file path",
 			},
 		},
-		Action: func(c *cli.Context) error {
-			cfg, err := config.DecodeFromFile[conf](c.String("config"))
-
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Printf("%v\n", cfg)
-
-			if c.Args().Get(0) == "experiments" { // show all experiments
-				listExperiments(cfg.Host, cfg.Token)
-			} else if c.Args().Get(0) == "experiment" { // show experiment
-				if c.Args().Len() > 1 {
-					showExperiment(cfg.Host, cfg.Token, c.Args().Get(1))
-				} else {
-					fmt.Println("Experiment ID not specified")
-				}
-			} else if c.Args().Get(0) == "enque" { // enque new experiment
-				if c.Args().Len() > 1 {
-					enqueExperiment(cfg.Host, cfg.Token, c.Args().Get(1))
-				} else {
-					fmt.Println("Input experiment file not specified")
-				}
-			} else if c.Args().Get(0) == "update" { // update experiment
-				if c.Args().Len() > 1 {
-					updateExperiment(cfg.Host, cfg.Token, c.Args().Get(1))
-				} else {
-					fmt.Println("Input update file not specified")
-				}
-			} else if c.Args().Get(0) == "logs" { // show experiment logs
-				if c.Args().Len() > 1 {
-					if c.Bool("live") {
-
-					} else {
-						showLogs(cfg.Host, cfg.Token, c.Args().Get(1))
+		Commands: []*cli.Command{
+			{
+				Name:    "all",
+				Aliases: []string{"a"},
+				Usage:   "Lists all experiments",
+				Action: func(c *cli.Context) error {
+					// load file
+					cfg, err := config.DecodeFromFile[conf](c.String("config"))
+					if err != nil {
+						panic(err)
 					}
-				} else {
-					fmt.Println("Experiment ID not specified")
-				}
-			}
+					fmt.Printf("%v\n", cfg)
 
-			return nil
+					listExperiments(cfg.Host, cfg.Token)
+
+					return nil
+				},
+			},
+			{
+				Name:      "show",
+				Aliases:   []string{"s"},
+				Usage:     "Shows an experiments",
+				ArgsUsage: "<id>",
+				Action: func(c *cli.Context) error {
+					cfg, err := config.DecodeFromFile[conf](c.String("config"))
+					if err != nil {
+						panic(err)
+					}
+					fmt.Printf("%v\n", cfg)
+
+					if c.Args().Len() > 0 {
+						showExperiment(cfg.Host, cfg.Token, c.Args().Get(0))
+					} else {
+						fmt.Println("Experiment ID not specified")
+					}
+
+					return nil
+				},
+			},
+			{
+				Name:      "enque",
+				Aliases:   []string{"e"},
+				Usage:     "Enques an experiment",
+				ArgsUsage: "<filename>",
+				Action: func(c *cli.Context) error {
+					cfg, err := config.DecodeFromFile[conf](c.String("config"))
+					if err != nil {
+						panic(err)
+					}
+					fmt.Printf("%v\n", cfg)
+
+					if c.Args().Len() > 0 {
+						enqueExperiment(cfg.Host, cfg.Token, c.Args().Get(0))
+					} else {
+						fmt.Println("Input experiment file not specified")
+					}
+
+					return nil
+				},
+			},
+			{
+				Name:      "update",
+				Aliases:   []string{"u"},
+				Usage:     "Updates an experiment",
+				ArgsUsage: "<filename>",
+				Action: func(c *cli.Context) error {
+					cfg, err := config.DecodeFromFile[conf](c.String("config"))
+					if err != nil {
+						panic(err)
+					}
+					fmt.Printf("%v\n", cfg)
+
+					if c.Args().Len() > 0 {
+						updateExperiment(cfg.Host, cfg.Token, c.Args().Get(0))
+					} else {
+						fmt.Println("Input experiment file not specified")
+					}
+
+					return nil
+				},
+			},
+			{
+				Name:      "logs",
+				Aliases:   []string{"l"},
+				Usage:     "Shows an experiment's logs",
+				ArgsUsage: "<id>",
+				Action: func(c *cli.Context) error {
+					cfg, err := config.DecodeFromFile[conf](c.String("config"))
+					if err != nil {
+						panic(err)
+					}
+					fmt.Printf("%v\n", cfg)
+
+					if c.Args().Len() > 1 {
+						showLogs(cfg.Host, cfg.Token, c.Args().Get(1))
+					} else {
+						fmt.Println("Experiment ID not specified")
+					}
+
+					return nil
+				},
+			},
 		},
 	}
 
