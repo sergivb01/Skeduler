@@ -1,0 +1,49 @@
+version: "3.6"
+services:
+  backend:
+    container_name: skeduler-backend
+    image: sk-server
+    volumes:
+      - ./config_server.yml:/application/config.yml
+    deploy:
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "8080:8080"
+    networks:
+      - backend
+    depends_on:
+      - database
+
+  worker:
+    container_name: skeduler-worker
+    image: sk-worker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config_worker.yml:/application/config.yml
+    deploy:
+      restart_policy:
+        condition: on-failure
+      resources:
+        reservations:
+          devices:
+            - capabilities: [ gpu ]
+    networks:
+      - backend
+
+  database:
+    container_name: skeduler-database
+    image: postgres:13.2
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: skeduler
+      POSTGRES_USER: skeduler
+      POSTGRES_PASSWORD: skeduler1234
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+networks:
+  backend:

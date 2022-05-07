@@ -96,8 +96,8 @@ func main() {
 				Usage:     "Shows an experiment's logs",
 				ArgsUsage: "<id>",
 				Action: func(c *cli.Context) error {
-					if c.Args().Len() > 1 {
-						showLogs(cfg.Host, cfg.Token, c.Args().Get(1))
+					if c.Args().Len() > 0 {
+						showLogs(cfg.Host, cfg.Token, c.Args().Get(0))
 					} else {
 						fmt.Println("Experiment ID not specified")
 					}
