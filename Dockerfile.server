@@ -26,4 +26,5 @@ WORKDIR /application/
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /app/application .
 
+CMD ["mkdir", "logs"]
 CMD ["./application"]
