@@ -37,7 +37,7 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:    "all",
-				Aliases: []string{"a"},
+				Aliases: []string{"a", "ls"},
 				Usage:   "Lists all experiments",
 				Action: func(c *cli.Context) error {
 					listExperiments(cfg.Host, cfg.Token)
