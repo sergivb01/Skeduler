@@ -25,10 +25,6 @@ services:
     deploy:
       restart_policy:
         condition: on-failure
-      resources:
-        reservations:
-          devices:
-            - capabilities: [ gpu ]
     networks:
       - internal
 

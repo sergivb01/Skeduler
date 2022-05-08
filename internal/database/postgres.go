@@ -79,7 +79,7 @@ func (p postgresDb) FetchJob(ctx context.Context) (*jobs.Job, error) {
 
 func (p postgresDb) GetAll(ctx context.Context) ([]jobs.Job, error) {
 	rows, err := p.db.Query(ctx, `SELECT id, name, description, docker_image AS "docker_embedded.docker_image", docker_command AS "docker_embedded.docker_command",
-		    docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status, metadata FROM jobs`)
+		    docker_environment AS "docker_embedded.docker_environment", created_at, updated_at, status, metadata FROM jobs ORDER BY updated_at ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("running query: %w", err)
 	}
