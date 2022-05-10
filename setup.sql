@@ -1,7 +1,5 @@
 CREATE TYPE job_status AS ENUM ('ENQUEUED', 'RUNNING', 'FINISHED', 'CANCELLED');
 
-CREATE INDEX jobs_status_index ON jobs (status);
-
 CREATE TABLE jobs
 (
     id                 uuid                     default gen_random_uuid()      not null
@@ -16,3 +14,8 @@ CREATE TABLE jobs
     status             job_status               default 'ENQUEUED'::job_status not null,
     metadata           json
 );
+
+CREATE INDEX jobs_status_index ON jobs (status);
+
+ALTER TABLE jobs OWNER TO skeduler;
+ALTER TYPE job_status OWNER TO skeduler;

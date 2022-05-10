@@ -1,0 +1,29 @@
+# syntax=docker/dockerfile:1
+
+# build stage
+FROM golang:1.18-alpine as builder
+
+RUN apk add --no-cache git
+
+# if dependencies are updated, rebuild everything
+WORKDIR /app
+
+COPY go.mod .
+COPY go.sum .
+
+RUN go mod download
+RUN go mod verify
+
+COPY . .
+ENV GO111MODULE=on
+RUN CGO_ENABLED=0 GOOS=linux go build -o application -ldflags "-s -w" gitlab-bcds.udg.edu/sergivb01/skeduler/cmd/server
+
+#second stage
+FROM scratch
+WORKDIR /application/
+
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /app/application .
+
+CMD ["mkdir", "logs"]
+CMD ["./application"]

@@ -118,7 +118,7 @@ func (w *worker) run(j jobs.Job) error {
 		_, _ = logWriter.Write([]byte{'\n'})
 	}()
 
-	logr.Printf("[%d] worker running task %+v at %s\n", w.id, t, time.Now())
+	logr.Printf("[%d] worker running task %+v at %s\n", w.id, j, time.Now())
 
 	ctx := context.TODO()
 	// TODO(@sergivb01): no fa pull d'imatges locals???
@@ -169,7 +169,7 @@ func (w *worker) run(j jobs.Job) error {
 
 	hostConfig := &container.HostConfig{
 		AutoRemove: true,
-		Resources: container.Resources{
+		Resources:  container.Resources{
 			// CPUCount: 2,
 			// Memory:   1024 * 1024 * 256, // 256mb
 		},

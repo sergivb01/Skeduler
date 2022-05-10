@@ -1,4 +1,4 @@
-database: "postgres://xavier@localhost:5432/postgres"
+database: "postgres://skeduler:skeduler1234@database:5432/skeduler"
 http:
   listen: ":8080"
   read_timeout: "15s"

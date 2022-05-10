@@ -1,4 +1,4 @@
-host: "http://localhost:8080"
+host: "http://backend:8080"
 token: "47"
 queues:
   - gpus: [ "all" ]
