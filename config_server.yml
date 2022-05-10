@@ -1,6 +1,13 @@
 database: "postgres://skeduler:skeduler1234@database:5432/skeduler"
+
+telegram_token: "5327559224:AAHXAV9Zd5NxmnMZWZIielNWqKKLYQrWabI"
+
 http:
   listen: ":8080"
   read_timeout: "15s"
   idle_timeout: "15s"
-  tokens: ["42", "47", "139"]
+
+tokens:
+  - "42"
+  - "47"
+  - "139"

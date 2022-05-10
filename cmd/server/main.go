@@ -19,12 +19,13 @@ type httpConfig struct {
 	WriteTimeout time.Duration `yaml:"write_timeout" json:"writeTimeout"`
 	ReadTimeout  time.Duration `yaml:"read_timeout" json:"readTimeout"`
 	IdleTimeout  time.Duration `yaml:"idle_timeout" json:"idleTimeout"`
-	Tokens       []string      `yaml:"tokens" json:"tokens"`
 }
 
 type conf struct {
-	Http     httpConfig `yaml:"http" json:"http"`
-	Database string     `yaml:"database" json:"database"`
+	Database      string     `yaml:"database" json:"database"`
+	Http          httpConfig `yaml:"http" json:"http"`
+	Tokens        []string   `yaml:"tokens" json:"tokens"`
+	TelegramToken string     `yaml:"telegram_token" json:"telegram_token"`
 }
 
 var (
@@ -52,7 +53,7 @@ func main() {
 	waitClose := make(chan struct{}, 1)
 
 	go func() {
-		if err := startHttp(closing, cfg.Http, db, waitClose); err != nil {
+		if err := startHttp(closing, *cfg, db, waitClose); err != nil {
 			log.Printf("error server: %s\n", err)
 		}
 	}()

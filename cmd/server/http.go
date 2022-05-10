@@ -19,29 +19,34 @@ import (
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
 
-func startHttp(quit <-chan struct{}, conf httpConfig, db database.Database, finished chan<- struct{}) error {
+func startHttp(quit <-chan struct{}, cfg conf, db database.Database, finished chan<- struct{}) error {
 	r := mux.NewRouter()
 
-	r.HandleFunc("/experiments", handleGetJobs(db)).Methods("GET")
-	r.HandleFunc("/experiments", handleNewJob(db)).Methods("POST")
-	r.HandleFunc("/experiments/{id}", handleGetById(db)).Methods("GET")
-	r.HandleFunc("/experiments/{id}", handleJobUpdate(db)).Methods("PUT")
-	r.HandleFunc("/logs/{id}", handleGetLogs()).Methods("GET")
-	r.HandleFunc("/logs/{id}/tail", handleFollowLogs()).Methods("GET")
+	s := &httpServer{
+		db: db,
+		t:  &telegramClient{token: cfg.TelegramToken},
+	}
 
-	r.HandleFunc("/workers/poll", handleWorkerFetch(db)).Methods("GET")
-	r.HandleFunc("/logs/{id}/upload", handleWorkerLogs()).Methods("GET")
+	r.HandleFunc("/experiments", s.handleGetJobs()).Methods("GET")
+	r.HandleFunc("/experiments", s.handleNewJob()).Methods("POST")
+	r.HandleFunc("/experiments/{id}", s.handleGetById()).Methods("GET")
+	r.HandleFunc("/experiments/{id}", s.handleJobUpdate()).Methods("PUT")
+	r.HandleFunc("/logs/{id}", s.handleGetLogs()).Methods("GET")
+	r.HandleFunc("/logs/{id}/tail", s.handleFollowLogs()).Methods("GET")
+
+	r.HandleFunc("/workers/poll", s.handleWorkerFetch()).Methods("GET")
+	r.HandleFunc("/logs/{id}/upload", s.handleWorkerLogs()).Methods("GET")
 
 	h := handlers.RecoveryHandler(handlers.PrintRecoveryStack(true))(
 		handlers.CombinedLoggingHandler(os.Stderr,
-			handlers.CompressHandler(authMiddleware(r, conf.Tokens))))
+			handlers.CompressHandler(authMiddleware(r, cfg.Tokens))))
 
 	srv := &http.Server{
-		Addr: conf.Listen,
+		Addr: cfg.Http.Listen,
 		// deshabilitat per poder fer streaming de logs
 		// WriteTimeout: conf.WriteTimeout,
-		ReadTimeout: conf.ReadTimeout,
-		IdleTimeout: conf.IdleTimeout,
+		ReadTimeout: cfg.Http.ReadTimeout,
+		IdleTimeout: cfg.Http.IdleTimeout,
 		Handler:     h,
 	}
 
@@ -57,7 +62,7 @@ func startHttp(quit <-chan struct{}, conf httpConfig, db database.Database, fini
 		close(idleConnsClosed)
 	}()
 
-	log.Printf("started http server: %s\n", conf.Listen)
+	log.Printf("started http server: %s\n", cfg.Http.Listen)
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 		// Error starting or closing listener:
 		return fmt.Errorf("running http server: %w", err)
@@ -69,9 +74,14 @@ func startHttp(quit <-chan struct{}, conf httpConfig, db database.Database, fini
 	return nil
 }
 
-func handleWorkerFetch(db database.Database) http.HandlerFunc {
+type httpServer struct {
+	db database.Database
+	t  *telegramClient
+}
+
+func (h *httpServer) handleWorkerFetch() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		job, err := db.FetchJob(r.Context())
+		job, err := h.db.FetchJob(r.Context())
 		if err != nil {
 			http.Error(w, "Error fetching jobs: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -86,7 +96,7 @@ func handleWorkerFetch(db database.Database) http.HandlerFunc {
 	}
 }
 
-func handleWorkerLogs() http.HandlerFunc {
+func (h *httpServer) handleWorkerLogs() http.HandlerFunc {
 	upgrader := websocket.Upgrader{}
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
@@ -134,9 +144,9 @@ func handleWorkerLogs() http.HandlerFunc {
 	}
 }
 
-func handleGetJobs(db database.Database) http.HandlerFunc {
+func (h *httpServer) handleGetJobs() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		job, err := db.GetAll(r.Context())
+		job, err := h.db.GetAll(r.Context())
 		if err != nil {
 			http.Error(w, fmt.Sprintf("error getting all jobs: %v\n", err), http.StatusInternalServerError)
 			return
@@ -146,7 +156,7 @@ func handleGetJobs(db database.Database) http.HandlerFunc {
 	}
 }
 
-func handleNewJob(db database.Database) http.HandlerFunc {
+func (h *httpServer) handleNewJob() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		var jobRequest database.InsertParams
@@ -156,7 +166,7 @@ func handleNewJob(db database.Database) http.HandlerFunc {
 			return
 		}
 
-		job, err := db.Insert(r.Context(), jobRequest)
+		job, err := h.db.Insert(r.Context(), jobRequest)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("error inserting job: %v\n", err), http.StatusInternalServerError)
 			return
@@ -166,7 +176,7 @@ func handleNewJob(db database.Database) http.HandlerFunc {
 	}
 }
 
-func handleJobUpdate(db database.Database) http.HandlerFunc {
+func (h *httpServer) handleJobUpdate() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id, err := uuid.FromString(vars["id"])
@@ -182,17 +192,21 @@ func handleJobUpdate(db database.Database) http.HandlerFunc {
 		}
 		changes.Id = id
 
-		job, err := db.Update(r.Context(), changes)
+		job, err := h.db.Update(r.Context(), changes)
 		if err != nil {
 			http.Error(w, "Error updating job: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		_ = json.NewEncoder(w).Encode(job)
+
+		if err := h.t.sendNotification(*job); err != nil {
+			log.Printf("error sending job update notification via telegram: %v", err)
+		}
 	}
 }
 
-func handleGetById(db database.Database) http.HandlerFunc {
+func (h *httpServer) handleGetById() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id, err := uuid.FromString(vars["id"])
@@ -201,7 +215,7 @@ func handleGetById(db database.Database) http.HandlerFunc {
 			return
 		}
 
-		job, err := db.GetById(r.Context(), id)
+		job, err := h.db.GetById(r.Context(), id)
 		if err != nil {
 			http.Error(w, "job does not exist", http.StatusNotFound)
 			return
@@ -216,7 +230,7 @@ func handleGetById(db database.Database) http.HandlerFunc {
 	}
 }
 
-func handleGetLogs() http.HandlerFunc {
+func (h *httpServer) handleGetLogs() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id, err := uuid.FromString(vars["id"])
@@ -238,7 +252,7 @@ func handleGetLogs() http.HandlerFunc {
 	}
 }
 
-func handleFollowLogs() http.HandlerFunc {
+func (h *httpServer) handleFollowLogs() http.HandlerFunc {
 	upgrader := websocket.Upgrader{}
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
