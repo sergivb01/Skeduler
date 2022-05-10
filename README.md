@@ -9,13 +9,13 @@ Desacoblar backend i els workers
         - [X] push job finalitzat: ha de fer push de tot el JOB complet perquè l'estat i altres dades poden haver estat
           modificades
 
-- [ ] Backend:
-    - [ ] Configuració
-    - [ ] Autenticació (tokens workers != tokens clients)
-    - [ ] Endpoints:
+- [X] Backend:
+    - [X] Configuració
+    - [X] Autenticació (tokens workers != tokens clients)
+    - [X] Endpoints:
         - [X] Crear nou job
         - [X] Obtenir job per id
-        - [ ] Obtenir tots els jobs
+        - [X] Obtenir tots els jobs
         - [X] Obtenir tots els logs
         - [X] Streaming de logs
 
