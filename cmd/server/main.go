@@ -15,10 +15,9 @@ import (
 )
 
 type httpConfig struct {
-	Listen       string        `yaml:"listen" json:"listen"`
-	WriteTimeout time.Duration `yaml:"write_timeout" json:"writeTimeout"`
-	ReadTimeout  time.Duration `yaml:"read_timeout" json:"readTimeout"`
-	IdleTimeout  time.Duration `yaml:"idle_timeout" json:"idleTimeout"`
+	Listen      string        `yaml:"listen" json:"listen"`
+	ReadTimeout time.Duration `yaml:"read_timeout" json:"readTimeout"`
+	IdleTimeout time.Duration `yaml:"idle_timeout" json:"idleTimeout"`
 }
 
 type conf struct {

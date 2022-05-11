@@ -21,7 +21,6 @@ func (t *telegramClient) sendNotification(job jobs.Job) error {
 	}
 
 	fileName := fmt.Sprintf("./logs/%v.log", job.ID)
-
 	b, err := ioutil.ReadFile(fileName)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err

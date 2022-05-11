@@ -28,9 +28,9 @@ type InsertParams struct {
 }
 
 type UpdateParams struct {
-	Id          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Metadata    interface{}
+	Id          uuid.UUID      `json:"id"`
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Metadata    interface{}    `json:"metadata"`
 	Status      jobs.JobStatus `json:"status"`
 }

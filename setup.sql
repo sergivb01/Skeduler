@@ -16,6 +16,8 @@ CREATE TABLE jobs
 );
 
 CREATE INDEX jobs_status_index ON jobs (status);
+CREATE INDEX jobs_createdat_index ON jobs (created_at);
 
-ALTER TABLE jobs OWNER TO skeduler;
+ALTER TABLE jobs
+    OWNER TO skeduler;
 ALTER TYPE job_status OWNER TO skeduler;

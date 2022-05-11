@@ -123,17 +123,17 @@ func (w *worker) run(j jobs.Job) error {
 	ctx := context.TODO()
 	// TODO(@sergivb01): no fa pull d'imatges locals???
 	// la variable reader conté el progrés/log del pull de la imatge.
-	// reader, err := cli.ImagePull(ctx, j.Docker.Image, types.ImagePullOptions{
-	// 	// pas de registre autenticació amb funció de authCredentials
-	// 	// RegistryAuth: "",
-	// })
-	// if err != nil {
-	// 	return fmt.Errorf("pulling docker image: %w", err)
-	// }
+	reader, err := w.cli.ImagePull(ctx, j.Docker.Image, types.ImagePullOptions{
+		// pas de registre autenticació amb funció de authCredentials
+		// RegistryAuth: "",
+	})
+	if err != nil {
+		return fmt.Errorf("pulling docker image: %w", err)
+	}
 
-	// if _, err := io.Copy(logWriter, reader); err != nil {
-	// 	logr.Printf("error copying pull output to log for %v: %v\n", j.ID, err)
-	// }
+	if _, err := io.Copy(logWriter, reader); err != nil {
+		logr.Printf("error copying pull output to log for %v: %v\n", j.ID, err)
+	}
 
 	logr.Printf("starting task at %s", time.Now())
 	if j.Docker.Environment == nil {
