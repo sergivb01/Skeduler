@@ -92,7 +92,7 @@ tokens:
 
 ## Bases de dades
 
-```postgresql
+```sql
 CREATE TYPE job_status AS ENUM ('ENQUEUED', 'RUNNING', 'FINISHED', 'CANCELLED');
 
 CREATE TABLE jobs
