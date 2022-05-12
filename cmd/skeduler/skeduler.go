@@ -12,6 +12,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/config"
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/database"
+	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
 
 type conf struct {
@@ -63,7 +64,7 @@ func main() {
 				ArgsUsage: "<filename>",
 				Action: func(c *cli.Context) error {
 					if c.Args().Len() > 0 {
-						return enqueExperiment(cfg.Host, cfg.Token, c.Args().Get(0))
+						return enqueueExperiment(cfg.Host, cfg.Token, c.Args().Get(0))
 					}
 
 					fmt.Println("Input experiment file not specified")
@@ -133,12 +134,12 @@ func listExperiments(host string, token string) error {
 		return fmt.Errorf("error getting jobs from backend: %w", err)
 	}
 
-	buf := bytes.NewBufferString("")
-	if err := json.NewEncoder(buf).Encode(&ret); err != nil {
+	b, err := json.Marshal(ret)
+	if err != nil {
 		return fmt.Errorf("error encoding data: %w", err)
 	}
 
-	fmt.Println(PrettyString(buf.String()))
+	fmt.Println(PrettyString(b))
 	return nil
 }
 
@@ -149,33 +150,38 @@ func showExperiment(host string, token string, id string) error {
 		return fmt.Errorf("error getting job from backend: %w", err)
 	}
 
-	buf := bytes.NewBufferString("")
-	if err := json.NewEncoder(buf).Encode(&ret); err != nil {
+	b, err := json.Marshal(ret)
+	if err != nil {
 		return fmt.Errorf("error encoding data: %w", err)
 	}
 
-	fmt.Println(PrettyString(buf.String()))
+	fmt.Println(PrettyString(b))
 	return nil
 }
 
-func enqueExperiment(host, token, fileName string) error {
+func enqueueExperiment(host, token, fileName string) error {
 	b, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return fmt.Errorf("error reading specification: %w", err)
 	}
 
+	var job jobs.Job
+	if err := json.Unmarshal(b, &job); err != nil {
+		return fmt.Errorf("error marshaling job: %w", err)
+	}
+
 	// TODO: no convertir a string
-	ret, err := newJob(context.TODO(), host, token, string(b))
+	ret, err := newJob(context.TODO(), host, token, job)
 	if err != nil {
 		return fmt.Errorf("error creating new job: %w", err)
 	}
 
-	buf := bytes.NewBufferString("")
-	if err := json.NewEncoder(buf).Encode(&ret); err != nil {
+	b, err = json.Marshal(ret)
+	if err != nil {
 		return fmt.Errorf("error encoding data: %w", err)
 	}
+	fmt.Println(PrettyString(b))
 
-	fmt.Println(PrettyString(buf.String()))
 	return nil
 }
 
@@ -185,24 +191,21 @@ func updateExperiment(host, token, fileName string) error {
 		return fmt.Errorf("error reading specification: %w", err)
 	}
 
-	// TODO: no convertir a string
-	buf := bytes.NewBufferString(string(b))
-
-	var job database.UpdateParams
-	if err := json.NewDecoder(buf).Decode(&job); err != nil {
-		return fmt.Errorf("error encoding data: %w", err)
+	var update database.UpdateParams
+	if err := json.Unmarshal(b, &update); err != nil {
+		return fmt.Errorf("error unmarshaling job: %w", err)
 	}
 
-	ret, err := jobUpdate(context.TODO(), host, token, job)
+	ret, err := jobUpdate(context.TODO(), host, token, update)
 	if err != nil {
 		return fmt.Errorf("error updating job: %w", err)
 	}
 
-	buf = bytes.NewBufferString("")
-	if err := json.NewEncoder(buf).Encode(&ret); err != nil {
+	b, err = json.Marshal(ret)
+	if err != nil {
 		return fmt.Errorf("error encoding data: %w", err)
 	}
-	fmt.Println(PrettyString(buf.String()))
+	fmt.Println(PrettyString(b))
 
 	return nil
 }
@@ -227,9 +230,9 @@ func followLogs(host, token, id string) error {
 	return nil
 }
 
-func PrettyString(str string) string {
+func PrettyString(b []byte) string {
 	var prettyJSON bytes.Buffer
-	if err := json.Indent(&prettyJSON, []byte(str), "", "\t"); err != nil {
+	if err := json.Indent(&prettyJSON, b, "", "\t"); err != nil {
 		panic(err)
 	}
 	return prettyJSON.String()

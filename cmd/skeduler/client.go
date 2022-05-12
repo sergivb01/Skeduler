@@ -50,10 +50,13 @@ func getJobs(ctx context.Context, host, token string) ([]jobs.Job, error) {
 	return []jobs.Job{}, fmt.Errorf("server error, recived status code %d and body", res.StatusCode)
 }
 
-func newJob(ctx context.Context, host, token string, jobRequest string) (jobs.Job, error) {
-	buf := bytes.NewBufferString(jobRequest)
+func newJob(ctx context.Context, host, token string, jobRequest jobs.Job) (jobs.Job, error) {
+	b, err := json.Marshal(jobRequest)
+	if err != nil {
+		return jobs.Job{}, fmt.Errorf("error unmarshaling json: %w", err)
+	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("%s/experiments", host), buf)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("%s/experiments", host), bytes.NewReader(b))
 	req.Header.Set("Authorization", token)
 
 	if err != nil {

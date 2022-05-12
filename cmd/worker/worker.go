@@ -34,7 +34,7 @@ type worker struct {
 
 func (w *worker) start() {
 	for t := range w.reqs {
-		if err := w.run(t); err != nil {
+		if err := w.run(context.TODO(), t); err != nil {
 			log.Printf("error running task: %s", err)
 			t.Status = jobs.Cancelled
 		} else {
@@ -79,7 +79,7 @@ func puller(tasks chan<- jobs.Job, closing <-chan struct{}, host string, token s
 	}
 }
 
-func (w *worker) run(j jobs.Job) error {
+func (w *worker) run(ctx context.Context, j jobs.Job) error {
 	u, err := url.Parse(w.host)
 	if err != nil {
 		return err
@@ -120,8 +120,6 @@ func (w *worker) run(j jobs.Job) error {
 
 	logr.Printf("[%d] worker running task %+v at %s\n", w.id, j, time.Now())
 
-	ctx := context.TODO()
-	// TODO(@sergivb01): no fa pull d'imatges locals???
 	// la variable reader conté el progrés/log del pull de la imatge.
 	reader, err := w.cli.ImagePull(ctx, j.Docker.Image, types.ImagePullOptions{
 		// pas de registre autenticació amb funció de authCredentials
