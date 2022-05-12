@@ -160,23 +160,18 @@ func showExperiment(host string, token string, id string) error {
 }
 
 func enqueueExperiment(host, token, fileName string) error {
-	b, err := ioutil.ReadFile(fileName)
+	job, err := jobs.NewFromFile(fileName)
 	if err != nil {
 		return fmt.Errorf("error reading specification: %w", err)
 	}
 
-	var job jobs.Job
-	if err := json.Unmarshal(b, &job); err != nil {
-		return fmt.Errorf("error marshaling job: %w", err)
-	}
-
 	// TODO: no convertir a string
-	ret, err := newJob(context.TODO(), host, token, job)
+	ret, err := newJob(context.TODO(), host, token, *job)
 	if err != nil {
 		return fmt.Errorf("error creating new job: %w", err)
 	}
 
-	b, err = json.Marshal(ret)
+	b, err := json.Marshal(ret)
 	if err != nil {
 		return fmt.Errorf("error encoding data: %w", err)
 	}
