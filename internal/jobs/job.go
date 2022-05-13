@@ -9,12 +9,6 @@ import (
 	"github.com/gofrs/uuid"
 )
 
-type Docker struct {
-	Image       string                 `json:"image" db:"docker_image"`
-	Command     string                 `json:"command" db:"docker_command"`
-	Environment map[string]interface{} `json:"environment" db:"docker_environment"`
-}
-
 type JobStatus string
 
 const (
@@ -33,6 +27,12 @@ type Job struct {
 	UpdatedAt   time.Time   `json:"updated_at" db:"updated_at"`
 	Status      JobStatus   `json:"status" db:"status"`
 	Metadata    interface{} `json:"metadata" db:"metadata"`
+}
+
+type Docker struct {
+	Image       string                 `json:"image" db:"docker_image"`
+	Command     string                 `json:"command" db:"docker_command"`
+	Environment map[string]interface{} `json:"environment" db:"docker_environment"`
 }
 
 const MagicEnd = "_#$#$#$<END>#$#$#$_"
