@@ -1,23 +1,8 @@
-# Notes
+# Skeduler
 
-Desacoblar backend i els workers
-- [X] Worker:
-    - [X] Configuració
-    - [X] Client HTTP:
-        - [X] polling per noves tasques
-        - [X] push de noves línies de log
-        - [X] push job finalitzat: ha de fer push de tot el JOB complet perquè l'estat i altres dades poden haver estat
-          modificades
+Encuador d'experiments.
 
-- [X] Backend:
-    - [X] Configuració
-    - [X] Autenticació (tokens workers != tokens clients)
-    - [X] Endpoints:
-        - [X] Crear nou job
-        - [X] Obtenir job per id
-        - [X] Obtenir tots els jobs
-        - [X] Obtenir tots els logs
-        - [X] Streaming de logs
+[Documentació](./docs/README.md)
 
 ## Dades
 
@@ -35,16 +20,3 @@ Desacoblar backend i els workers
     - Metadades: json
     - CreatedAt
     - UpdatedAt
-
-## Pendent
-
-- Server:
-    - **HTTP**: reestructuració, posar tokens de seguretat, control exhaustiu d'errors
-    - **Configuració**: variables d'entorn?
-    - **Main**: possibilitat de canviar la base de dades desitjada, control d'errors, flags, ...
-    - **Bases de dades**: actualitzar sqlite
-
-- Worker:
-    - **HTTP**: control exhaustiu d'errors, ...
-    - **Configuració**: variables d'entorn?
-    - **Main**: idem
