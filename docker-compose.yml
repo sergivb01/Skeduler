@@ -2,7 +2,7 @@ version: "3.6"
 services:
   backend:
     container_name: skeduler-backend
-    image: sk-server
+    image: gitlab-bcds.udg.edu:5050/sergivb01/skeduler/server:latest
     volumes:
       - ./config_server.yml:/application/config.yml
       - ./data/logs/:/application/logs
@@ -18,7 +18,7 @@ services:
 
   worker:
     container_name: skeduler-worker
-    image: sk-worker
+    image: gitlab-bcds.udg.edu:5050/sergivb01/skeduler/worker:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./config_worker.yml:/application/config.yml
@@ -30,7 +30,7 @@ services:
 
   database:
     container_name: skeduler-database
-    image: sk-database
+    image: gitlab-bcds.udg.edu:5050/sergivb01/skeduler/database:latest
     restart: unless-stopped
     environment:
       POSTGRES_DB: skeduler

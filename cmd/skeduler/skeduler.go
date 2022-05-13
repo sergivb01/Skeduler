@@ -32,8 +32,9 @@ func main() {
 	}
 
 	app := &cli.App{
-		Name:  "skeduler",
-		Usage: "Encuador d'experiments amb Docker",
+		Name:    "skeduler",
+		Usage:   "Encuador d'experiments amb Docker",
+		Version: "1.0.0",
 		Commands: []*cli.Command{
 			{
 				Name:    "all",
@@ -110,6 +111,7 @@ func main() {
 				},
 			},
 		},
+		EnableBashCompletion: true,
 		Authors: []*cli.Author{
 			{
 				Name:  "Sergi Vos",
