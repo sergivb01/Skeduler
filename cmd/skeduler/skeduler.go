@@ -15,6 +15,7 @@ import (
 	"gitlab-bcds.udg.edu/sergivb01/skeduler/internal/jobs"
 )
 
+// conf stores the configuration of the application
 type conf struct {
 	Host  string `json:"host" yaml:"host"`
 	Token string `json:"token" yaml:"token"`
@@ -130,6 +131,7 @@ func main() {
 
 }
 
+// listExperiments lists all experiments
 func listExperiments(host string, token string) error {
 	ret, err := getJobs(context.TODO(), host, token)
 	if err != nil {
@@ -141,10 +143,11 @@ func listExperiments(host string, token string) error {
 		return fmt.Errorf("error encoding data: %w", err)
 	}
 
-	fmt.Println(PrettyString(b))
+	fmt.Println(prettyString(b))
 	return nil
 }
 
+// showExperiment shows an experiment by ID and prints its details
 func showExperiment(host string, token string, id string) error {
 	jobId, _ := uuid.FromString(id)
 	ret, err := getJob(context.TODO(), host, token, jobId)
@@ -157,10 +160,11 @@ func showExperiment(host string, token string, id string) error {
 		return fmt.Errorf("error encoding data: %w", err)
 	}
 
-	fmt.Println(PrettyString(b))
+	fmt.Println(prettyString(b))
 	return nil
 }
 
+// enqueueExperiment enqueues an experiment from a file
 func enqueueExperiment(host, token, fileName string) error {
 	job, err := jobs.NewFromFile(fileName)
 	if err != nil {
@@ -176,11 +180,12 @@ func enqueueExperiment(host, token, fileName string) error {
 	if err != nil {
 		return fmt.Errorf("error encoding data: %w", err)
 	}
-	fmt.Println(PrettyString(b))
+	fmt.Println(prettyString(b))
 
 	return nil
 }
 
+// updateExperiment updates an experiment with the given file name
 func updateExperiment(host, token, fileName string) error {
 	b, err := ioutil.ReadFile(fileName)
 	if err != nil {
@@ -201,11 +206,12 @@ func updateExperiment(host, token, fileName string) error {
 	if err != nil {
 		return fmt.Errorf("error encoding data: %w", err)
 	}
-	fmt.Println(PrettyString(b))
+	fmt.Println(prettyString(b))
 
 	return nil
 }
 
+// showLogs shows the logs of an experiment
 func showLogs(host string, token string, id string) error {
 	jobId, _ := uuid.FromString(id)
 	ret, err := getLogs(context.TODO(), host, token, jobId)
@@ -217,6 +223,7 @@ func showLogs(host string, token string, id string) error {
 	return nil
 }
 
+// followLogs follows the logs of an experiment in realtime and prints them to stdout until the user presses Ctrl+C
 func followLogs(host, token, id string) error {
 	jobId, _ := uuid.FromString(id)
 	if err := getLogsFollow(context.TODO(), host, token, jobId, os.Stdout); err != nil {
@@ -226,7 +233,8 @@ func followLogs(host, token, id string) error {
 	return nil
 }
 
-func PrettyString(b []byte) string {
+// prettyString returns a pretty-printed string representation of the given JSON data.
+func prettyString(b []byte) string {
 	var prettyJSON bytes.Buffer
 	if err := json.Indent(&prettyJSON, b, "", "\t"); err != nil {
 		panic(err)

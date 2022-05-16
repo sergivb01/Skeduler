@@ -358,6 +358,7 @@ func isValid(token string, allowedTokens []string) bool {
 	return false
 }
 
+// authMiddleware is a middleware that checks the token in the request header
 func authMiddleware(next http.Handler, tokens []string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// get the token from the header
