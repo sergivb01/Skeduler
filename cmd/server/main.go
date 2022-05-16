@@ -21,10 +21,10 @@ type httpConfig struct {
 }
 
 type conf struct {
-	Database      string     `yaml:"database" json:"database"`
-	Http          httpConfig `yaml:"http" json:"http"`
-	Tokens        []string   `yaml:"tokens" json:"tokens"`
-	TelegramToken string     `yaml:"telegram_token" json:"telegram_token"`
+	Database string         `yaml:"database" json:"database"`
+	Http     httpConfig     `yaml:"http" json:"http"`
+	Tokens   []string       `yaml:"tokens" json:"tokens"`
+	Telegram telegramClient `yaml:"telegram" json:"telegram"`
 }
 
 var (

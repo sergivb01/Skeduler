@@ -24,7 +24,10 @@ func startHttp(quit <-chan struct{}, cfg conf, db database.Database, finished ch
 
 	s := &httpServer{
 		db: db,
-		t:  &telegramClient{token: cfg.TelegramToken},
+		t: &telegramClient{
+			Token:  cfg.Telegram.Token,
+			ChatId: cfg.Telegram.ChatId,
+		},
 	}
 
 	r.HandleFunc("/experiments", s.handleGetJobs()).Methods("GET")

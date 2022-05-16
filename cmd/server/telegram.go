@@ -11,25 +11,26 @@ import (
 )
 
 type telegramClient struct {
-	token string
+	Token  string `yaml:"token" json:"token"`
+	ChatId int64  `yaml:"chat_id" json:"chat_id"`
 }
 
 func (t *telegramClient) sendNotification(job jobs.Job) error {
-	bot, err := tgbotapi.NewBotAPI(t.token)
+	bot, err := tgbotapi.NewBotAPI(t.Token)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating bot: %w", err)
 	}
 
 	fileName := fmt.Sprintf("./logs/%v.log", job.ID)
 	b, err := ioutil.ReadFile(fileName)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
+		return fmt.Errorf("error opening log file: %w", err)
 	}
 
 	message := tgbotapi.DocumentConfig{
 		BaseFile: tgbotapi.BaseFile{
 			BaseChat: tgbotapi.BaseChat{
-				ChatID: 225012886,
+				ChatID: t.ChatId,
 			},
 			File: tgbotapi.FileBytes{
 				Name:  fileName,

@@ -1,6 +1,8 @@
 database: "postgres://skeduler:skeduler1234@database:5432/skeduler"
 
-telegram_token: "5327559224:AAHXAV9Zd5NxmnMZWZIielNWqKKLYQrWabI"
+telegram:
+  token: "5327559224:AAHXAV9Zd5NxmnMZWZIielNWqKKLYQrWabI"
+  chat_id: 225012886
 
 http:
   listen: ":8080"
