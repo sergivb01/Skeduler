@@ -67,6 +67,7 @@ func newJob(ctx context.Context, host, token string, jobRequest jobs.Job) (jobs.
 	if err != nil {
 		return jobs.Job{}, fmt.Errorf("performing get request: %w", err)
 	}
+
 	defer res.Body.Close()
 
 	switch res.StatusCode {

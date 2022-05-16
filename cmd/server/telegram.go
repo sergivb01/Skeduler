@@ -15,6 +15,7 @@ type telegramClient struct {
 	ChatId int64  `yaml:"chat_id" json:"chat_id"`
 }
 
+// sendNotification sends a notification to the telegram bot
 func (t *telegramClient) sendNotification(job jobs.Job) error {
 	bot, err := tgbotapi.NewBotAPI(t.Token)
 	if err != nil {
@@ -27,6 +28,7 @@ func (t *telegramClient) sendNotification(job jobs.Job) error {
 		return fmt.Errorf("error opening log file: %w", err)
 	}
 
+	// Send the log file and job status update
 	message := tgbotapi.DocumentConfig{
 		BaseFile: tgbotapi.BaseFile{
 			BaseChat: tgbotapi.BaseChat{

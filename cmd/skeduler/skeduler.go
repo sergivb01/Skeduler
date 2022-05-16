@@ -167,7 +167,6 @@ func enqueueExperiment(host, token, fileName string) error {
 		return fmt.Errorf("error reading specification: %w", err)
 	}
 
-	// TODO: no convertir a string
 	ret, err := newJob(context.TODO(), host, token, *job)
 	if err != nil {
 		return fmt.Errorf("error creating new job: %w", err)
